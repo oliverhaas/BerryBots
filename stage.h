@@ -220,7 +220,14 @@ class Stage {
                                
     double timeToFirstWallCollision(ShipMoveData shipDatum, Ship *ship, Line2D* wall);
     double timeToFirstShipCollision(ShipMoveData shipDatum, Ship *ship, ShipMoveData shipDatum2, Ship *ship2);
+    void timeToFirstTorpedoExplosion(double *timeToFirstExplosion, int *torpedoIndex);
 
+    void pushShips(Ship **oldShips, Ship **ships, ShipMoveData *shipData, int numShips, double dt);
+    void pushLasers(double dt);
+    void pushTorpedos(double dt);
+    void explodeTorpedo(Ship **oldShips, Ship **ships, ShipMoveData *shipData, int numShips,
+                        int torpedoIndex, bool **torpedoHits, int gameTime);
+    
     void solveQuadratic(double aa, double bb, double cc, double *t1, double *t2);
     double getPosMin(double aa, double bb);
     double getPosMin(double aa, double bb, double cc, double dd);

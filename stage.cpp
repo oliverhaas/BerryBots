@@ -770,31 +770,8 @@ double Stage::timeToFirstWallCollision(
   
   solveQuadratic(aa, bb, cc, &t1, &t2);
 
-//  std::cout << "t1 " << t1 << '\n';
-//  std::cout << "t2 " << t2 << '\n';
-//  std::cout << "x " << shipDatum.shipCircle->h() << '\n';
-//  std::cout << "y " << shipDatum.shipCircle->k() << '\n';
-//  std::cout << "vx " << shipDatum.xSpeed << '\n';
-//  std::cout << "vy " << shipDatum.ySpeed << '\n';
-//  std::cout << "ax " << shipDatum.dxSpeed << '\n';
-//  std::cout << "ay " << shipDatum.dySpeed << '\n';
-//  std::cout << "x1 " << wall->x1() << '\n';
-//  std::cout << "x2 " << wall->x2() << '\n';
-//  std::cout << "y1 " << wall->y1() << '\n';
-//  std::cout << "y2 " << wall->y2() << '\n';
-//  std::cout << "aa " << aa << '\n';
-//  std::cout << "bb " << bb << '\n';
-//  std::cout << "cc " << cc << '\n';
-//  std::cout << "dx " << dx << '\n';
-//  std::cout << "dy " << dy << '\n';
-//  std::cout << "dxy " << dxy << '\n';
-  
   cc = cc + SHIP_SIZE*sqrt(dx*dx+dy*dy);
   solveQuadratic(aa, bb, cc, &t3, &t4);
-  
-//  std::cout << "cc " << cc << '\n';
-//  std::cout << "t3 " << t3 << '\n';
-//  std::cout << "t4 " << t4 << '\n';  
   
   return getPosMin(t1, t2, t3, t4); // TODO better failsafe?
 }
@@ -816,20 +793,7 @@ double Stage::timeToFirstShipCollision(
   dd = 2.*(dx*dxp + dy*dyp);
   ee = dx*dx + dy*dy - SHIP_SIZE*SHIP_SIZE;
 
-//  std::cout << "x1y1 " << shipDatum.shipCircle->h() << ' ' << shipDatum.shipCircle->k() << '\n';
-//  std::cout << "x2y2 " << shipDatum2.shipCircle->h() << ' ' << shipDatum2.shipCircle->k() << '\n';
-//  std::cout << "x1y1next " << shipDatum.nextShipCircle->h() << ' ' << shipDatum.nextShipCircle->k() << '\n';
-//  std::cout << "x2y2next " << shipDatum2.nextShipCircle->h() << ' ' << shipDatum2.nextShipCircle->k() << '\n';
-//  std::cout << "aa " << aa << '\n';
-//  std::cout << "bb " << bb << '\n';
-//  std::cout << "cc " << cc << '\n';
-//  std::cout << "dd " << dd << '\n';
-//  std::cout << "ee " << ee << '\n';
   solveQuartic(aa, bb, cc, dd, ee, &t1, &t2, &t3, &t4);
-//  std::cout << "t1 " << t1 << '\n';
-//  std::cout << "t2 " << t2 << '\n';
-//  std::cout << "t3 " << t3 << '\n';
-//  std::cout << "t4 " << t4 << '\n';
   
   return getPosMin(t1, t2, t3, t4);
 }
@@ -897,10 +861,6 @@ void Stage::solveQuartic(
     qq = 0.5 + 0.1*i;
     rr = qq*qq;
     ss = qq*rr;
-//    std::cout << "pp " << pp << '\n';
-//    std::cout << "qq " << qq << '\n';
-//    std::cout << "rr " << rr << '\n';
-//    std::cout << "ss " << ss << '\n';
     for (int ii = 0; ii < 1000; ii++) {
       ppold = pp;
       qqold = qq;
@@ -912,7 +872,6 @@ void Stage::solveQuartic(
       ss = solveQuarticHelper(bb, cc, dd, ee, ss, pp, qq, rr);
       if (abs(pp-ppold) < eps1*abs(pp) + eps1 and abs(qq-qqold) < eps1*abs(qq) + eps1 and
           abs(rr-rrold) < eps1*abs(rr) + eps1 and abs(ss-ssold) < eps1*abs(ss) + eps1) {
-//        std::cout << "iiend " << ii << '\n';
         break;
       }
     }
@@ -920,10 +879,6 @@ void Stage::solveQuartic(
     *t2 = approxReal(qq, eps2);
     *t3 = approxReal(rr, eps2);
     *t4 = approxReal(ss, eps2);
-//    std::cout << "pp " << pp << '\n';
-//    std::cout << "qq " << qq << '\n';
-//    std::cout << "rr " << rr << '\n';
-//    std::cout << "ss " << ss << '\n';
   }
   return;
 }
@@ -996,19 +951,21 @@ void Stage::moveAndCheckCollisions(
 
   double dtSub = 1./intervals;  // @ohaas: Time step of sub steps
   
-  // Set initual speed
+  // Set inital speed
   for (int x = 0; x < numShips; x++) {
     Ship *ship = ships[x];
     ShipMoveData shipDatum = shipData[x];
     if (ship->alive) {
+      Ship *oldShip = oldShips[x];
+      ship->x = oldShips[x]->x;
+      ship->y = oldShips[x]->y;
       shipDatum.xSpeed = shipDatum.startXSpeed;
       shipDatum.ySpeed = shipDatum.startYSpeed;
     }
   }
 
 
-  // Logs for laser hits and alive ships created outside of loop
-  // damage, remove dead lasers.
+  // Logs for laser and torpedo hits and alive ships created outside of sub loop.
   bool **laserHits = new bool*[numShips];
   for (int x = 0; x < numShips; x++) {
     laserHits[x] = new bool[numShips];
@@ -1016,11 +973,23 @@ void Stage::moveAndCheckCollisions(
       laserHits[x][y] = false;
     }
   }
+  bool **torpedoHits = new bool*[numShips];
+  for (int x = 0; x < numShips; x++) {
+    torpedoHits[x] = new bool[numShips];
+    for (int y = 0; y < numShips; y++) {
+      torpedoHits[x][y] = false;
+    }
+  }
   bool *wasAlive = new bool[numShips];
   for (int x = 0; x < numShips; x++) {
     wasAlive[x] = ships[x]->alive;
   }
-  
+
+  // For lasers fired this tick only, check if they intersect any OTHER ships at
+  // their initial position (@ohaas: [-15,15] from origin) before moving the first time.
+  checkLaserShipCollisions(ships, shipData, numShips, laserHits, numLasers_,
+                           gameTime, true);
+                             
   for (int x = 0; x < intervals; x++) {
   
     // Move ships one interval and check for collisions. 
@@ -1029,8 +998,8 @@ void Stage::moveAndCheckCollisions(
     double timeToDo = dtSub;
     while (timeToDo > 1.e-6*dtSub) {
     
-      double timeToFirstCollision = std::numeric_limits<double>::infinity();
-      int typeFirstCollision = -1;
+      double timeDo = timeToDo;
+      int typeFirstEvent = -1;
       int indFirstCollidingShip, indFirstCollidingShip2;
       
       for (int y = 0; y < numShips; y++) {
@@ -1046,11 +1015,7 @@ void Stage::moveAndCheckCollisions(
             Point2D *p1 = 0;
             Point2D *p2 = 0;
             if (shipDatum->nextShipCircle->intersects(line, &p1, &p2)) {
-//              std::cout << "gameTime " << gameTime << '\n';
-//              std::cout << "indWall " << z << '\n';
-//              std::cout << "intersects " << shipDatum->nextShipCircle->intersects(line, &p1, &p2) << '\n';
-//              std::cout << "p " << p1->getX() << ' ' << p1->getY() << ' ' << p2->getX() << ' ' << p2->getY()<< '\n';
-//              std::cout << '\n';
+              // @ohaas: Do better handling, i.e. collision point on line, corners?
               bool valid = true;
               if (p1 != 0) {
                 Line2D vertexSightLine1(thisX, thisY,
@@ -1070,9 +1035,9 @@ void Stage::moveAndCheckCollisions(
               }
               if (valid) {
                 double ttc = timeToFirstWallCollision(*shipDatum, ships[y], line);
-                if (ttc < timeToFirstCollision) {
-                  timeToFirstCollision = ttc;
-                  typeFirstCollision = 0;
+                if (ttc < timeDo) {
+                  timeDo = ttc;
+                  typeFirstEvent = 0;
                   indFirstCollidingShip = y;  // @ohaas: Maybe better use ship[y]->index
                   shipDatum->wallImpactLine = line;
                 }
@@ -1091,11 +1056,9 @@ void Stage::moveAndCheckCollisions(
               ShipMoveData *shipDatum2 = &(shipData[z]);
               if (shipDatum->nextShipCircle->overlaps(shipDatum2->nextShipCircle)) {
                 double ttc = timeToFirstShipCollision(*shipDatum, ships[y], *shipDatum2, ships[z]);
-//                std::cout << "ttc " << ttc << '\n';
-//                std::cout << '\n';
-                if (ttc < timeToFirstCollision) {
-                  timeToFirstCollision = ttc;
-                  typeFirstCollision = 1;
+                if (ttc < timeDo) {
+                  timeDo = ttc;
+                  typeFirstEvent = 1;
                   indFirstCollidingShip = y;
                   indFirstCollidingShip2 = z;
                 }
@@ -1105,9 +1068,18 @@ void Stage::moveAndCheckCollisions(
         }
       }
       
+      // Check for torpedo explisions
+      double ttfte;
+      int torpedoFirstExplodedIndex;
+      timeToFirstTorpedoExplosion(&ttfte, &torpedoFirstExplodedIndex);
+      if (ttfte < timeToDo) {
+        timeDo = ttfte;
+        typeFirstEvent = 2;
+      }
+      
       // To the time push until first collision any ship does
-      double timeDo = fmin(timeToFirstCollision, timeToDo);
       timeToDo -= timeDo;
+      
       for (int kk = 0; kk < numShips; kk++) {
         if (ships[kk]->alive) {
           ShipMoveData *shipDatum = &(shipData[kk]);
@@ -1123,7 +1095,10 @@ void Stage::moveAndCheckCollisions(
         }
       }
       
-      if (typeFirstCollision == 0) {  // Wall collision
+      // Push torpedos
+      pushTorpedos(timeDo);
+      
+      if (typeFirstEvent == 0) {  // First collision is wall collision
         ShipMoveData *shipDatum = &(shipData[indFirstCollidingShip]);
         Ship *ship = ships[indFirstCollidingShip];
         Line2D *line = shipDatum->wallImpactLine;
@@ -1151,7 +1126,7 @@ void Stage::moveAndCheckCollisions(
         }
         setSpeedAndHeading(oldShips[indFirstCollidingShip], ship, shipDatum);
         
-      } else if (typeFirstCollision == 1) {  // Ship-Ship collision
+      } else if (typeFirstEvent == 1) {  // First collision is Ship-Ship collision
       
         // Update x/y/heading/speeds for ships with ship-ship collisions.
         ShipMoveData *shipDatum = &(shipData[indFirstCollidingShip]);
@@ -1183,55 +1158,38 @@ void Stage::moveAndCheckCollisions(
               normalRelativeAngle(angle-M_PI), force,
               angle, force, gameTime);
         }
+      } else if (typeFirstEvent == 2) {
+        explodeTorpedo(oldShips, ships, shipData, numShips, 
+                       torpedoFirstExplodedIndex, torpedoHits, gameTime);
       }
-//      if (typeFirstCollision >= 0) {
-//        std::cout << "gameTime " << gameTime << '\n';
-//        std::cout << "gameTime Sub " << x*dtSub << ' ' << (x+1)*dtSub << '\n';
-//        std::cout << "timeToDo " << timeToDo << '\n';
-//        std::cout << "timeDo " << timeDo << '\n';
-//        std::cout << "typeFirstCollision " << typeFirstCollision << '\n';
-//        std::cout << "timeToFirstCollision " << timeToFirstCollision << '\n';
-//        std::cout << "shipData[0] " << shipData[0].shipCircle->h() << " " << shipData[0].shipCircle->k() << '\n';
-//        std::cout << "shipData[1] " << shipData[1].shipCircle->h() << " " << shipData[1].shipCircle->k() << '\n';
-//        std::cout << '\n';
-//      }
     }
+    
+    // Move lasers
+    pushLasers(dtSub);
+    
+    // Check all lasers (only just fired lasers can't collide with the ship they were fired by)
+    checkLaserShipCollisions(ships, shipData, numShips, laserHits, numLasers_,
+                             gameTime, false);
+                             
   }
 
-
-
-
-  // For lasers fired this tick, check if they intersect any other ships at
-  // their initial position (0-25 from origin) before moving the first time.
-  checkLaserShipCollisions(ships, shipData, numShips, laserHits, numLasers_,
-                           gameTime, true);
-
-  // Move lasers one whole tick.
-  for (int x = 0; x < numLasers_; x++) {
-    Laser *laser = lasers_[x];
-    laser->x += laser->dx;
-    laser->y += laser->dy;
-    laserLines_[x]->shift(laser->dx, laser->dy);
-  }
-  
-  checkLaserShipCollisions(ships, shipData, numShips, laserHits, numLasers_,
-                           gameTime, false);
 
   // Scoring for destroyed by laser for ships
   // @ohaas: Can be done outside of sub tick move
+  //         since it's only for events
   for (int x = 0; x < numShips; x++) {
     Ship *ship = ships[x];
     if (wasAlive[x] && !ship->alive) {
       int numDestroyers = 0;
       for (int y = 0; y < numShips; y++) {
-        if (laserHits[y][x]) {
+        if (laserHits[y][x] || torpedoHits[y][x]) {
           numDestroyers++;
         }
       }
       Ship **destroyers = new Ship*[numDestroyers];
       int destroyerIndex = 0;
       for (int y = 0; y < numShips; y++) {
-        if (laserHits[y][x]) {
+        if (laserHits[y][x] || torpedoHits[y][x]) {
           destroyers[destroyerIndex++] = ships[y];
         }
       }
@@ -1254,6 +1212,8 @@ void Stage::moveAndCheckCollisions(
       delete destroyers;
     }
   }
+  // @ohaas: Kill lasers at walls and clean up dead lasers
+  //         Could be done in sub ticks, but once every tick is enough
   for (int x = 0; x < numLasers_; x++) {
     Laser *laser = lasers_[x];
     Line2D *laserLine = laserLines_[x];
@@ -1283,139 +1243,50 @@ void Stage::moveAndCheckCollisions(
     delete laserHits[x];
   }
   delete laserHits;
-
-
-  // Move torpedoes and check for collisions.
-  for (int x = 0; x < numShips; x++) {
-    Ship *ship = ships[x];
-    wasAlive[x] = ship->alive;
-  }
-  bool **torpedoHits = new bool*[numShips];
-  for (int x = 0; x < numShips; x++) {
-    torpedoHits[x] = new bool[numShips];
-    for (int y = 0; y < numShips; y++) {
-      torpedoHits[x][y] = false;
-    }
-  }
-  for (int x = 0; x < numTorpedos_; x++) {
-    Torpedo *torpedo = torpedos_[x];
-    double distanceRemaining = torpedo->distance - torpedo->distanceTraveled;
-    if (distanceRemaining >= TORPEDO_SPEED) {
-      torpedo->x += torpedo->dx;
-      torpedo->y += torpedo->dy;
-      torpedo->distanceTraveled += TORPEDO_SPEED;
-    } else {
-      torpedo->x += cos(torpedo->heading) * distanceRemaining;
-      torpedo->y += sin(torpedo->heading) * distanceRemaining;
-      for (int y = 0; y < numShips; y++) {
-        Ship *ship = ships[y];
-        if (ship->alive) {
-          double distSq =
-              square(torpedo->x - ship->x) + square(torpedo->y - ship->y);
-          if (distSq < square(TORPEDO_BLAST_RADIUS)) {
-            int firingShipIndex = torpedo->shipIndex;
-            torpedoHits[firingShipIndex][y] = true;
-            ShipMoveData *shipDatum = &(shipData[y]);
-            double blastDistance = sqrt(distSq);
-            double blastFactor =
-                square(1.0 - (blastDistance / TORPEDO_BLAST_RADIUS));
-            double blastForce = blastFactor * TORPEDO_BLAST_FORCE;
-            double blastDamage = blastFactor
-                * (ship->energyEnabled ? TORPEDO_BLAST_DAMAGE : 0);
-            double blastAngle =
-                atan2(ship->y - torpedo->y, ship->x - torpedo->x);
-            double damageScore = (blastDamage / DEFAULT_ENERGY);
-            if (ship->teamIndex == ships[firingShipIndex]->teamIndex) {
-              ships[firingShipIndex]->friendlyDamage += damageScore;
-            } else {
-              ships[firingShipIndex]->damage += damageScore;
-            }
-            ship->energy -= blastDamage;
-            shipDatum->xSpeed += cos(blastAngle) * blastForce;
-            shipDatum->ySpeed += sin(blastAngle) * blastForce;
-            setSpeedAndHeading(oldShips[y], ship, shipDatum);
-
-            for (int z = 0; z < numEventHandlers_; z++) {
-              eventHandlers_[z]->handleTorpedoHitShip(ships[torpedo->shipIndex],
-                  ship, shipDatum->startXSpeed, shipDatum->startYSpeed,
-                  blastAngle, blastForce, blastDamage, gameTime);
-            }
-  
-            if (ship->energy <= 0) {
-              ship->alive = false;
-            }
-          }
-        }
-      }
-
-      for (int z = 0; z < numEventHandlers_; z++) {
-        eventHandlers_[z]->handleTorpedoExploded(torpedo, gameTime);
-      }
-
-      if (numTorpedos_ > 1) {
-        torpedos_[x] = torpedos_[numTorpedos_ - 1];
-      }
-      delete torpedo;
-      numTorpedos_--;
-      x--;
-    }
-  }
-  for (int x = 0; x < numShips; x++) {
-    Ship *ship = ships[x];
-    if (wasAlive[x] && !ship->alive) {
-      int numDestroyers = 0;
-      for (int y = 0; y < numShips; y++) {
-        if (torpedoHits[y][x]) {
-          numDestroyers++;
-        }
-      }
-      Ship **destroyers = new Ship*[numDestroyers];
-      int destroyerIndex = 0;
-      for (int y = 0; y < numShips; y++) {
-        if (torpedoHits[y][x]) {
-          destroyers[destroyerIndex++] = ships[y];
-        }
-      }
-
-      for (int y = 0; y < numShips; y++) {
-        if (torpedoHits[y][x]) {
-          double destroyScore = 1.0 / numDestroyers;
-          if (ship->teamIndex == ships[y]->teamIndex) {
-            ships[y]->friendlyKills += destroyScore;
-          } else {
-            ships[y]->kills += destroyScore;
-          }
-        }
-      }
-      for (int z = 0; z < numEventHandlers_; z++) {
-        eventHandlers_[z]->handleShipDestroyed(ship, gameTime, destroyers,
-                                               numDestroyers);
-      }
-      delete destroyers;
-    }
-  }
-
+  // Delete torpedo hit logs
   for (int x = 0; x < numShips; x++) {
     delete torpedoHits[x];
   }
   delete torpedoHits;
-  delete wasAlive;
+  // Delete ship alive logs
+  delete wasAlive;  
 
+  // @ohaas: Clean up temporary ship data
   for (int x = 0; x < numShips; x++) {
     ShipMoveData *shipDatum = &(shipData[x]);
     if (shipDatum->initialized) {
       delete shipDatum->shipCircle;
       delete shipDatum->nextShipCircle;
-//      for (int y = 0; y < numShips; y++) {
-//        ShipCollisionData *collisionData = shipDatum->shipCollisionData[y];
-//        if (collisionData != 0) {
-//          delete collisionData;
-//        }
-//      }
-      delete shipDatum->shipCollisionData;
     }
   }
   delete shipData;
+}
+
+void Stage::pushShips(Ship **oldShips, Ship **ships, ShipMoveData *shipData,
+    int numShips, double dt) {
+  for (int kk = 0; kk < numShips; kk++) {
+    if (ships[kk]->alive) {
+      ShipMoveData *shipDatum = &(shipData[kk]);
+      Ship *ship = ships[kk];
+      shipDatum->shipCircle->setPosition(
+          shipDatum->shipCircle->h() + shipDatum->xSpeed*dt + 0.5*shipDatum->dxSpeed*dt*dt,
+          shipDatum->shipCircle->k() + shipDatum->ySpeed*dt + 0.5*shipDatum->dySpeed*dt*dt);  
+      shipDatum->xSpeed += shipDatum->dxSpeed*dt;
+      shipDatum->ySpeed += shipDatum->dySpeed*dt;
+      ship->x = shipDatum->shipCircle->h();
+      ship->y = shipDatum->shipCircle->k();
+      setSpeedAndHeading(oldShips[kk], ship, shipDatum);
+    }
+  }
+}
+      
+void Stage::pushLasers(double dt) {
+  for (int kk = 0; kk < numLasers_; kk++) {
+    Laser *laser = lasers_[kk];
+    laser->x += laser->dx*dt;
+    laser->y += laser->dy*dt;
+    laserLines_[kk]->shift(laser->dx*dt, laser->dy*dt);
+  }
 }
 
 void Stage::checkLaserShipCollisions(Ship **ships, ShipMoveData *shipData,
@@ -1427,10 +1298,12 @@ void Stage::checkLaserShipCollisions(Ship **ships, ShipMoveData *shipData,
     if (ship->alive) {
       for (int y = 0; y < numLasers; y++) {
         Laser *laser = lasers_[y];
-        if (((firstTickLasers && laser->fireTime == gameTime
-                 && laser->shipIndex != ship->index)
-            || !firstTickLasers)
-            && shipDatum->shipCircle->intersects(laserLines_[y])) {
+        // @ohaas: Changed this conditionals slightly to make function more usable
+        //         from my point of view.
+        if (((laser->fireTime == gameTime && laser->shipIndex != ship->index) || 
+              (!firstTickLasers && laser->fireTime != gameTime))
+            && shipDatum->shipCircle->intersects(laserLines_[y])
+            && !laser->dead) {
           int firingShipIndex = laser->shipIndex;
           laserHits[firingShipIndex][x] = true;
           double laserDamage = (ship->energyEnabled ? LASER_DAMAGE : 0);
@@ -1455,6 +1328,85 @@ void Stage::checkLaserShipCollisions(Ship **ships, ShipMoveData *shipData,
       }
     }
   }
+}
+
+void Stage::timeToFirstTorpedoExplosion(double *timeToFirstExplosion, int *torpedoIndex) {
+
+  *timeToFirstExplosion = std::numeric_limits<double>::infinity();
+  double currentTime;
+  for (int ii = 0; ii < numTorpedos_; ii++) {
+    Torpedo *torpedo = torpedos_[ii];
+    currentTime = (torpedo->distance - torpedo->distanceTraveled)/TORPEDO_SPEED;
+    if (currentTime < *timeToFirstExplosion) {
+      *timeToFirstExplosion = currentTime;
+      *torpedoIndex = ii;
+    }
+  }
+  return;
+}
+
+void Stage::pushTorpedos(double dt) {
+  for (int ii = 0; ii < numTorpedos_; ii++) {
+    Torpedo *torpedo = torpedos_[ii];
+    torpedo->x += torpedo->dx*dt;
+    torpedo->y += torpedo->dy*dt;
+    torpedo->distanceTraveled += TORPEDO_SPEED*dt;
+  }
+}
+
+void Stage::explodeTorpedo(Ship **oldShips, Ship **ships, ShipMoveData *shipData, int numShips,
+    int torpedoIndex, bool **torpedoHits, int gameTime) {
+    
+  Torpedo *torpedo = torpedos_[torpedoIndex]; // Torpedos index NOT the same as torpedo id
+  
+  for (int ii = 0; ii < numShips; ii++) {
+    Ship *ship = ships[ii];
+    if (ship->alive) {
+      double distSq = square(torpedo->x - ship->x) + square(torpedo->y - ship->y);
+      if (distSq < square(TORPEDO_BLAST_RADIUS)) {
+        int firingShipIndex = torpedo->shipIndex;
+        torpedoHits[firingShipIndex][ii] = true;
+        ShipMoveData *shipDatum = &(shipData[ii]);
+        double blastDistance = sqrt(distSq);
+        double blastFactor = square(1.0 - (blastDistance / TORPEDO_BLAST_RADIUS));
+        double blastForce = blastFactor * TORPEDO_BLAST_FORCE;
+        double blastDamage = blastFactor * (ship->energyEnabled ? TORPEDO_BLAST_DAMAGE : 0);
+        double blastAngle = atan2(ship->y - torpedo->y, ship->x - torpedo->x);
+        double damageScore = (blastDamage / DEFAULT_ENERGY);
+        if (ship->teamIndex == ships[firingShipIndex]->teamIndex) {
+          ships[firingShipIndex]->friendlyDamage += damageScore;
+        } else {
+          ships[firingShipIndex]->damage += damageScore;
+        }
+
+        // TODO: Not sure if handler is called correctly, kinda depends on what it exactly does.
+        for (int kk = 0; kk < numEventHandlers_; kk++) {
+          eventHandlers_[kk]->handleTorpedoHitShip(ships[torpedo->shipIndex],
+              ship, shipDatum->xSpeed, shipDatum->ySpeed,
+              blastAngle, blastForce, blastDamage, gameTime);
+        }
+
+        ship->energy -= blastDamage;
+        shipDatum->xSpeed += cos(blastAngle) * blastForce;
+        shipDatum->ySpeed += sin(blastAngle) * blastForce;
+        setSpeedAndHeading(oldShips[ii], ship, shipDatum);
+        
+        if (ship->energy <= 0) {
+          ship->alive = false;
+        }
+      }
+    }
+  }
+
+  for (int z = 0; z < numEventHandlers_; z++) {
+    eventHandlers_[z]->handleTorpedoExploded(torpedo, gameTime);
+  }
+
+  if (numTorpedos_ > 1) {
+    torpedos_[torpedoIndex] = torpedos_[numTorpedos_ - 1];
+  }
+  delete torpedo;
+  numTorpedos_--;
 }
 
 void Stage::setSpeedAndHeading(
@@ -1529,22 +1481,24 @@ void Stage::updateShipPosition(Ship *ship, double x, double y) {
   ship->y = y;
 }
 
+// @ohaas: Changed laser line such that it's centered around firing origin.
+//         This makes lasers easier or more intuitive to hit for the user in my opinion.
 int Stage::fireLaser(Ship *ship, double heading, int gameTime) {
   if (ship->laserGunHeat > 0 || numLasers_ >= MAX_LASERS) {
     return 0;
   } else {
     double cosHeading = cos(heading);
     double sinHeading = sin(heading);
-    double laserX = ship->x + (cosHeading * LASER_SPEED);
-    double laserY = ship->y + (sinHeading * LASER_SPEED);
-    Line2D laserStartLine(ship->x, ship->y, laserX, laserY);
+    double dx = cosHeading * LASER_SPEED;
+    double dy = sinHeading * LASER_SPEED;
+    double laserX = ship->x + dx*0.5;
+    double laserY = ship->y + dy*0.5;
+    Line2D laserStartLine(ship->x+dx, ship->y+dy, laserX, laserY);
     if (hasVision(&laserStartLine)) {
       Laser *laser = new Laser;
       laser->id = nextLaserId_++;
       laser->shipIndex = ship->index;
       laser->fireTime = gameTime;
-      double dx = cosHeading * LASER_SPEED;
-      double dy = sinHeading * LASER_SPEED;
       laser->srcX = ship->x;
       laser->srcY = ship->y;
       laser->x = laserX;
@@ -1581,13 +1535,17 @@ int Stage::fireTorpedo(
     double dy = sinHeading * TORPEDO_SPEED;
     torpedo->srcX = ship->x;
     torpedo->srcY = ship->y;
-    torpedo->x = ship->x + (cosHeading * SHIP_RADIUS);
-    torpedo->y = ship->y + (sinHeading * SHIP_RADIUS);
+    torpedo->x = ship->x;
+    torpedo->y = ship->y;
     torpedo->heading = heading;
+//    // @ohaas: Torpedos explode the latest at outer walls.
+//    double flightTime = getPosMin(-torpedo->x/dx, (width_-torpedo->x)/dx, 
+//                                  -torpedo->y/dy, (height_-torpedo->y)/dy);
+//    torpedo->distance = fmin(TORPEDO_SPEED*flightTime, distance);
     torpedo->distance = distance;
     torpedo->dx = dx;
     torpedo->dy = dy;
-    torpedo->distanceTraveled = SHIP_RADIUS;
+    torpedo->distanceTraveled = 0.;
     torpedos_[numTorpedos_++] = torpedo;
 
     for (int z = 0; z < numEventHandlers_; z++) {
