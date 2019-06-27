@@ -66,6 +66,12 @@
 #define CPU_TIME_TICKS        1000
 #define MAX_SCORE_STATS       1000
 
+// @ohaas: Some new constants for new physics.
+#define SHIP_SHIP_BOUNCE      0.5
+#define WALL_DMG_SCALE        0.01
+#define SHIPSHIP_DMG_SCALE    0.01
+#define SPEED_OF_LIGHT        100
+
 #if defined(_WIN32)
 #define BB_DIRSEP      "\\"
 #define BB_DIRSEP_CHR  '\\'
