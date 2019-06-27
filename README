@@ -1,3 +1,12 @@
+
+
+BerryBots (sadd fork) README
+=========
+
+Original README of BerryBots
+--------------
+
+
 Main site:   http://berrybots.com
 GitHub repo: http://github.com/Voidious/BerryBots
 Wiki:        http://berrybots.com/wiki
@@ -17,3 +26,27 @@ stages.
 Ships and stages are written in Lua, a lightweight, flexible programming
 language designed to be embedded into other programs. BerryBots is available for
 Mac, Linux, Windows, and Raspberry Pi.
+
+
+
+
+Additions in this fork
+--------------
+
+In this fork of BerrBots (and hopefully in the future in the official version) I 
+added and changed mainly some game physics, which in my opinion improve the experience.
+As of now it's a work-in-progress, but goals are mainly:
+  
+- Include collision damage for both ship-wall and ship-ship collisions.
+- Improve time stepping of movements so they approximate more closely continuous time physics rather
+  than introducing unintuitive discretization errors (e.g. in collisions). Sensors, interaction
+  with user code, etc. will still stay discretized as up to now.
+- Maybe change movement physics from non-relativistic to relativistic. This should for one limit
+  the maximum velocity, and maybe introduce interesting challenges for fast moving bots, mainly
+  in very large stages. If the "speed of light" is chosen large enough, the normal stages wouldn't 
+  be affected.
+
+
+
+
+
