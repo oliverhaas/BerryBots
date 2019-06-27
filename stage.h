@@ -21,6 +21,8 @@
 #ifndef STAGE_H
 #define STAGE_H
 
+#include <complex>
+
 #include "bbconst.h"
 #include "bbutil.h"
 #include "circle2d.h"
@@ -215,6 +217,24 @@ class Stage {
                                  int numCircles);
     int clearStaleUserGfxTexts(int gameTime, UserGfxText** gfxTexts,
                                int numTexts);
+                               
+    double timeToFirstWallCollision(ShipMoveData shipDatum, Ship *ship, Line2D* wall);
+    double timeToFirstShipCollision(ShipMoveData shipDatum, Ship *ship, ShipMoveData shipDatum2, Ship *ship2);
+
+    void solveQuadratic(double aa, double bb, double cc, double *t1, double *t2);
+    double getPosMin(double aa, double bb);
+    double getPosMin(double aa, double bb, double cc, double dd);
+    void solveCubic(double aa, double bb, double cc, double dd,
+      double *t1, double *t2, double *t3);
+    void solveQuartic(double aa, double bb, double cc, double dd, double ee, 
+      double *t1, double *t2, double *t3, double *t4);
+
+    std::complex<double> solveCubicHelper(double bb, double cc, double dd, 
+      std::complex<double> pp, std::complex<double> qq, std::complex<double> rr);
+    std::complex<double> solveQuarticHelper(double bb, double cc, double dd, double ee,
+      std::complex<double> pp, std::complex<double> qq, std::complex<double> rr, std::complex<double> ss);
+    double approxReal(std::complex<double> pp, double eps);
+    
 };
 
 #endif

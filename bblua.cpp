@@ -76,10 +76,6 @@ void initShipState(lua_State **shipState, const char *shipCwd) {
   *shipState = luaL_newstate();
   lua_setcwd(*shipState, shipCwd);
   luaL_openlibs(*shipState);
-// @ohaas: I'm trying to figure out a good way to include fast numerical
-//         functions or a library. FFI is one solution.
-//  luaopen_ffi(*shipState);
-//  lua_setglobal(*shipState,"ffi");
   luaSrand(*shipState);
   registerShip(*shipState);
   registerSensors(*shipState);

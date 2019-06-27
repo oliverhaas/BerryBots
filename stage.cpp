@@ -23,6 +23,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <algorithm>
+#include <complex>
+#include <limits>
+#include <iostream>
 
 #include "bbutil.h"
 #include "stage.h"
@@ -708,11 +711,243 @@ void Stage::setTeamsAndShips(
   numShips_ = numShips;
 }
 
+void Stage::solveQuadratic(
+    double aa, double bb, double cc, double *t1, double *t2) {
+  double qq = bb*bb - 4.*aa*cc;
+  if(qq < 0.) {
+    *t1 = std::numeric_limits<double>::quiet_NaN();
+    *t2 = std::numeric_limits<double>::quiet_NaN();
+    return;
+  } else if(qq > 0. && abs(aa) > 0.) {
+    qq = -0.5*(bb + signum(bb)*sqrt(qq));
+    *t1 = qq/aa;
+    *t2 = cc/qq;
+    return;
+  } else if(qq == 0. && abs(aa) > 0.) {
+    *t1 = -0.5*bb/aa;
+    *t2 = std::numeric_limits<double>::quiet_NaN();
+    return;
+  } else if(aa == 0. && abs(bb) > 0.) {
+    *t1 = -cc/bb;
+    *t2 = std::numeric_limits<double>::quiet_NaN();
+    return;
+  } else {
+    *t1 = std::numeric_limits<double>::quiet_NaN();
+    *t2 = std::numeric_limits<double>::quiet_NaN();
+    return;
+  }
+}
+
+double Stage::getPosMin(
+    double aa, double bb) {
+  if (aa > 0. and bb > 0.) {
+    return fmin(aa,bb);
+  } else if(aa > 0.) {
+    return aa;
+  } else if(bb > 0.){
+    return bb;
+  } else {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+}
+
+double Stage::getPosMin(
+    double aa, double bb, double cc, double dd) {
+  return getPosMin(getPosMin(aa,bb),getPosMin(cc,dd));
+}
+
+double Stage::timeToFirstWallCollision(
+    ShipMoveData shipDatum, Ship *ship, Line2D* wall) {
+  double aa, bb, cc, t1, t2, t3, t4;
+  double dx = wall->x2() - wall->x1();
+  double dy = wall->y2() - wall->y1();
+  double dxy = wall->x2()*wall->y1() - wall->y2()*wall->x1();
+  
+  aa = 0.5*(dy*shipDatum.dxSpeed - dx*shipDatum.dySpeed);
+  bb = dy*shipDatum.xSpeed - dx*shipDatum.ySpeed;
+  cc = dy*shipDatum.shipCircle->h() - dx*shipDatum.shipCircle->k() + 
+       dxy - SHIP_RADIUS*sqrt(dx*dx+dy*dy);
+  
+  solveQuadratic(aa, bb, cc, &t1, &t2);
+
+//  std::cout << "t1 " << t1 << '\n';
+//  std::cout << "t2 " << t2 << '\n';
+//  std::cout << "x " << shipDatum.shipCircle->h() << '\n';
+//  std::cout << "y " << shipDatum.shipCircle->k() << '\n';
+//  std::cout << "vx " << shipDatum.xSpeed << '\n';
+//  std::cout << "vy " << shipDatum.ySpeed << '\n';
+//  std::cout << "ax " << shipDatum.dxSpeed << '\n';
+//  std::cout << "ay " << shipDatum.dySpeed << '\n';
+//  std::cout << "x1 " << wall->x1() << '\n';
+//  std::cout << "x2 " << wall->x2() << '\n';
+//  std::cout << "y1 " << wall->y1() << '\n';
+//  std::cout << "y2 " << wall->y2() << '\n';
+//  std::cout << "aa " << aa << '\n';
+//  std::cout << "bb " << bb << '\n';
+//  std::cout << "cc " << cc << '\n';
+//  std::cout << "dx " << dx << '\n';
+//  std::cout << "dy " << dy << '\n';
+//  std::cout << "dxy " << dxy << '\n';
+  
+  cc = cc + SHIP_SIZE*sqrt(dx*dx+dy*dy);
+  solveQuadratic(aa, bb, cc, &t3, &t4);
+  
+//  std::cout << "cc " << cc << '\n';
+//  std::cout << "t3 " << t3 << '\n';
+//  std::cout << "t4 " << t4 << '\n';  
+  
+  return getPosMin(t1, t2, t3, t4); // TODO better failsafe?
+}
+
+double Stage::timeToFirstShipCollision(
+    ShipMoveData shipDatum, Ship *ship, ShipMoveData shipDatum2, Ship *ship2) {
+  double aa, bb, cc, dd, ee;
+  double t1, t2, t3, t4;
+  double dx = shipDatum2.shipCircle->h() - shipDatum.shipCircle->h();
+  double dy = shipDatum2.shipCircle->k() - shipDatum.shipCircle->k();
+  double dxp = shipDatum2.xSpeed - shipDatum.xSpeed;
+  double dyp = shipDatum2.ySpeed - shipDatum.ySpeed;
+  double dxpp = shipDatum2.dxSpeed - shipDatum.dxSpeed;
+  double dypp = shipDatum2.dySpeed - shipDatum.dySpeed;
+  
+  aa = 0.25*(dxpp*dxpp + dypp*dypp);
+  bb = dxp*dxpp + dyp*dypp;
+  cc = dxp*dxp + dx*dxpp + dyp*dyp + dy*dypp;
+  dd = 2.*(dx*dxp + dy*dyp);
+  ee = dx*dx + dy*dy - SHIP_SIZE*SHIP_SIZE;
+
+//  std::cout << "x1y1 " << shipDatum.shipCircle->h() << ' ' << shipDatum.shipCircle->k() << '\n';
+//  std::cout << "x2y2 " << shipDatum2.shipCircle->h() << ' ' << shipDatum2.shipCircle->k() << '\n';
+//  std::cout << "x1y1next " << shipDatum.nextShipCircle->h() << ' ' << shipDatum.nextShipCircle->k() << '\n';
+//  std::cout << "x2y2next " << shipDatum2.nextShipCircle->h() << ' ' << shipDatum2.nextShipCircle->k() << '\n';
+//  std::cout << "aa " << aa << '\n';
+//  std::cout << "bb " << bb << '\n';
+//  std::cout << "cc " << cc << '\n';
+//  std::cout << "dd " << dd << '\n';
+//  std::cout << "ee " << ee << '\n';
+  solveQuartic(aa, bb, cc, dd, ee, &t1, &t2, &t3, &t4);
+//  std::cout << "t1 " << t1 << '\n';
+//  std::cout << "t2 " << t2 << '\n';
+//  std::cout << "t3 " << t3 << '\n';
+//  std::cout << "t4 " << t4 << '\n';
+  
+  return getPosMin(t1, t2, t3, t4);
+}
+
+void Stage::solveCubic(
+    double aa, double bb, double cc, double dd,
+    double *t1, double *t2, double *t3) {
+  std::complex<double> ppold, qqold, rrold;
+  std::complex<double> pp, qq, rr;
+  std::complex<double> i(0.,1.);
+  double eps1 = 1.e-12;
+  double eps2 = 1.e-9;
+  if (aa == 0.) {
+    *t3 = std::numeric_limits<double>::quiet_NaN();
+    solveQuadratic(bb, cc, dd, t1, t2);
+  } else {
+    bb = bb/aa;
+    cc = cc/aa;
+    dd = dd/aa;
+    pp = 1.;
+    qq = 0.5 + 0.1*i;
+    rr = (*t2)*(*t2);
+    for (int ii = 0; ii < 1000; ii++) {
+      ppold = pp;
+      qqold = qq;
+      rrold = rr;
+      pp = solveCubicHelper(bb, cc, dd, pp, qq, rr);
+      qq = solveCubicHelper(bb, cc, dd, qq, rr, pp);
+      rr = solveCubicHelper(bb, cc, dd, rr, pp, qq);
+      if (abs(pp-ppold) < eps1*abs(pp) + eps1 and abs(qq-qqold) < eps1*abs(qq) + eps1 and
+          abs(rr-rrold) < eps1*abs(rr) + eps1) {
+        break;
+      }
+    }
+    *t1 = approxReal(pp, eps2);
+    *t2 = approxReal(qq, eps2);
+    *t3 = approxReal(rr, eps2);
+  }
+  return;
+}
+
+std::complex<double> Stage::solveCubicHelper(
+    double bb, double cc, double dd,
+    std::complex<double> pp, std::complex<double> qq, std::complex<double> rr) {
+  return pp - (dd+pp*(cc+pp*(bb+pp)))/((pp-qq)*(pp-rr));
+}
+
+void Stage::solveQuartic(
+    double aa, double bb, double cc, double dd, double ee, 
+    double *t1, double *t2, double *t3, double *t4) {
+  std::complex<double> ppold, qqold, rrold, ssold;
+  std::complex<double> pp, qq, rr, ss;
+  std::complex<double> i(0.,1.);
+  double eps1 = 1.e-12;
+  double eps2 = 1.e-9;
+  if(aa == 0.) {
+    *t4 = std::numeric_limits<double>::quiet_NaN();
+    solveCubic(bb, cc, dd, ee, t1, t2, t3);
+  } else {
+    bb = bb/aa;
+    cc = cc/aa;
+    dd = dd/aa;
+    ee = ee/aa;
+    pp = 1.;
+    qq = 0.5 + 0.1*i;
+    rr = qq*qq;
+    ss = qq*rr;
+//    std::cout << "pp " << pp << '\n';
+//    std::cout << "qq " << qq << '\n';
+//    std::cout << "rr " << rr << '\n';
+//    std::cout << "ss " << ss << '\n';
+    for (int ii = 0; ii < 1000; ii++) {
+      ppold = pp;
+      qqold = qq;
+      rrold = rr;
+      ssold = ss;
+      pp = solveQuarticHelper(bb, cc, dd, ee, pp, qq, rr, ss);
+      qq = solveQuarticHelper(bb, cc, dd, ee, qq, rr, ss, pp);
+      rr = solveQuarticHelper(bb, cc, dd, ee, rr, ss, pp, qq);
+      ss = solveQuarticHelper(bb, cc, dd, ee, ss, pp, qq, rr);
+      if (abs(pp-ppold) < eps1*abs(pp) + eps1 and abs(qq-qqold) < eps1*abs(qq) + eps1 and
+          abs(rr-rrold) < eps1*abs(rr) + eps1 and abs(ss-ssold) < eps1*abs(ss) + eps1) {
+//        std::cout << "iiend " << ii << '\n';
+        break;
+      }
+    }
+    *t1 = approxReal(pp, eps2);
+    *t2 = approxReal(qq, eps2);
+    *t3 = approxReal(rr, eps2);
+    *t4 = approxReal(ss, eps2);
+//    std::cout << "pp " << pp << '\n';
+//    std::cout << "qq " << qq << '\n';
+//    std::cout << "rr " << rr << '\n';
+//    std::cout << "ss " << ss << '\n';
+  }
+  return;
+}
+
+std::complex<double> Stage::solveQuarticHelper(
+    double bb, double cc, double dd, double ee,
+    std::complex<double> pp, std::complex<double> qq, std::complex<double> rr, std::complex<double> ss) {
+  return pp - (ee+pp*(dd+pp*(cc+pp*(bb+pp))))/((pp-qq)*(pp-rr)*(pp-ss));
+}
+
+double Stage::approxReal(
+    std::complex<double> zz, double eps) {
+  if (fabs(std::imag(zz)) < eps*abs(zz)) {
+    return std::real(zz);
+  } else {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+}
+
 void Stage::moveAndCheckCollisions(
     Ship **oldShips, Ship **ships, int numShips, int gameTime) {
   ShipMoveData *shipData = new ShipMoveData[numShips];
 
-  // Calculate initial movement and decide on a common sub-tick interval.
+  // Calculate non-collision movement and decide on reasonable sub step.
   int intervals = 1;
   for (int x = 0; x < numShips; x++) {
     Ship *ship = ships[x];
@@ -732,8 +967,8 @@ void Stage::moveAndCheckCollisions(
       shipDatum.startYSpeed = sin(ship->heading) * ship->speed;
       shipDatum.xSpeed = shipDatum.startXSpeed + shipDatum.dxSpeed;
       shipDatum.ySpeed = shipDatum.startYSpeed + shipDatum.dySpeed;
-      ship->x += shipDatum.xSpeed;
-      ship->y += shipDatum.ySpeed;
+      ship->x += shipDatum.startXSpeed + 0.5*shipDatum.dxSpeed;  // @ohaas: Verlet Integration
+      ship->y += shipDatum.startYSpeed + 0.5*shipDatum.dySpeed;  // Exact for constant thrust per step
       ship->hitWall = false;
       ship->hitShip = false;
       setSpeedAndHeading(oldShip, ship, &shipDatum);
@@ -745,10 +980,10 @@ void Stage::moveAndCheckCollisions(
       shipDatum.wallImpactAngle = 0;
       shipDatum.wallImpactLine = 0;
       shipDatum.shipCollision = false;
-      shipDatum.shipCollisionData = new ShipCollisionData*[numShips];
-      for (int y = 0; y < numShips; y++) {
-        shipDatum.shipCollisionData[y] = 0;
-      }
+//      shipDatum.shipCollisionData = new ShipCollisionData*[numShips];
+//      for (int y = 0; y < numShips; y++) {
+//        shipDatum.shipCollisionData[y] = 0;
+//      }
       shipDatum.stopped = false;
   
       double moveDistance =
@@ -759,30 +994,63 @@ void Stage::moveAndCheckCollisions(
     shipData[x] = shipDatum;
   }
 
+  double dtSub = 1./intervals;  // @ohaas: Time step of sub steps
+  
+  // Set initual speed
   for (int x = 0; x < numShips; x++) {
-    if (ships[x]->alive) {
-      shipData[x].dx = shipData[x].xSpeed / intervals;
-      shipData[x].dy = shipData[x].ySpeed / intervals;
+    Ship *ship = ships[x];
+    ShipMoveData shipDatum = shipData[x];
+    if (ship->alive) {
+      shipDatum.xSpeed = shipDatum.startXSpeed;
+      shipDatum.ySpeed = shipDatum.startYSpeed;
     }
   }
 
-  for (int x = 0; x < intervals; x++) {
-    // Move ships one interval and check for wall collisions.
+
+  // Logs for laser hits and alive ships created outside of loop
+  // damage, remove dead lasers.
+  bool **laserHits = new bool*[numShips];
+  for (int x = 0; x < numShips; x++) {
+    laserHits[x] = new bool[numShips];
     for (int y = 0; y < numShips; y++) {
-      if (ships[y]->alive) {
-        ShipMoveData *shipDatum = &(shipData[y]);
-        if (!shipDatum->stopped) {
-          Ship *oldShip = oldShips[y];
+      laserHits[x][y] = false;
+    }
+  }
+  bool *wasAlive = new bool[numShips];
+  for (int x = 0; x < numShips; x++) {
+    wasAlive[x] = ships[x]->alive;
+  }
+  
+  for (int x = 0; x < intervals; x++) {
+  
+    // Move ships one interval and check for collisions. 
+    // Always time push at most until next collision or end of sub-tick
+    // time step, then repeat.
+    double timeToDo = dtSub;
+    while (timeToDo > 1.e-6*dtSub) {
+    
+      double timeToFirstCollision = std::numeric_limits<double>::infinity();
+      int typeFirstCollision = -1;
+      int indFirstCollidingShip, indFirstCollidingShip2;
+      
+      for (int y = 0; y < numShips; y++) {
+        if (ships[y]->alive) {
+          ShipMoveData *shipDatum = &(shipData[y]);
+          double thisX = shipDatum->shipCircle->h();
+          double thisY = shipDatum->shipCircle->k();
           shipDatum->nextShipCircle->setPosition(
-              oldShip->x + (shipDatum->dx * (x + 1)),
-              oldShip->y + (shipDatum->dy * (x + 1)));
+              thisX + shipDatum->xSpeed*timeToDo + 0.5*shipDatum->dxSpeed*timeToDo*timeToDo,
+              thisY + shipDatum->ySpeed*timeToDo + 0.5*shipDatum->dySpeed*timeToDo*timeToDo);
           for (int z = 0; z < numWallLines_; z++) {
             Line2D* line = wallLines_[z];
             Point2D *p1 = 0;
             Point2D *p2 = 0;
             if (shipDatum->nextShipCircle->intersects(line, &p1, &p2)) {
-              double thisX = shipDatum->shipCircle->h();
-              double thisY = shipDatum->shipCircle->k();
+//              std::cout << "gameTime " << gameTime << '\n';
+//              std::cout << "indWall " << z << '\n';
+//              std::cout << "intersects " << shipDatum->nextShipCircle->intersects(line, &p1, &p2) << '\n';
+//              std::cout << "p " << p1->getX() << ' ' << p1->getY() << ' ' << p2->getX() << ' ' << p2->getY()<< '\n';
+//              std::cout << '\n';
               bool valid = true;
               if (p1 != 0) {
                 Line2D vertexSightLine1(thisX, thisY,
@@ -801,20 +1069,11 @@ void Stage::moveAndCheckCollisions(
                 delete p2;
               }
               if (valid) {
-                shipDatum->stopped = shipDatum->wallCollision = true;
-                double heading = ships[y]->heading;
-                double angle1 = line->theta() - M_PI_2;
-                double angleDiff1 = abs(normalRelativeAngle(heading - angle1));
-                double angle2 = line->theta() + M_PI_2;
-                double angleDiff2 = abs(normalRelativeAngle(heading - angle2));
-                if (angleDiff1 < shipDatum->minWallImpactDiff) {
-                  shipDatum->minWallImpactDiff = angleDiff1;
-                  shipDatum->wallImpactAngle = angle1;
-                  shipDatum->wallImpactLine = line;
-                }
-                if (angleDiff2 < shipDatum->minWallImpactDiff) {
-                  shipDatum->minWallImpactDiff = angleDiff2;
-                  shipDatum->wallImpactAngle = angle2;
+                double ttc = timeToFirstWallCollision(*shipDatum, ships[y], line);
+                if (ttc < timeToFirstCollision) {
+                  timeToFirstCollision = ttc;
+                  typeFirstCollision = 0;
+                  indFirstCollidingShip = y;  // @ohaas: Maybe better use ship[y]->index
                   shipDatum->wallImpactLine = line;
                 }
               }
@@ -822,165 +1081,125 @@ void Stage::moveAndCheckCollisions(
           }
         }
       }
-    }
-
-    // Check for ship-ship collisions.
-    for (int y = 0; y < numShips; y++) {
-      ShipMoveData *shipDatum = &(shipData[y]);
-      if (ships[y]->alive && !shipDatum->stopped) {
-        for (int z = 0; z < numShips; z++) {
-          if (y != z && ships[z]->alive) {
-            ShipMoveData *shipDatum2 = &(shipData[z]);
-            if (shipDatum->nextShipCircle->overlaps(shipDatum2->shipCircle)
-                || (!shipDatum2->stopped
-                    && shipDatum->nextShipCircle->overlaps(
-                        shipDatum2->nextShipCircle))) {
-              shipDatum->stopped = shipDatum2->stopped =
-                  shipDatum->shipCollision = shipDatum2->shipCollision = true;
-              if (shipDatum->shipCollisionData[z] == 0) {
-                shipDatum->shipCollisionData[z] = new ShipCollisionData;
-              }
-              if (shipDatum2->shipCollisionData[y] == 0) {
-                shipDatum2->shipCollisionData[y] = new ShipCollisionData;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Update for next tick and clear old locations.
-    for (int y = 0; y < numShips; y++) {
-      if (ships[y]->alive) {
+      
+      // Check for ship-ship collisions.
+      for (int y = 0; y < numShips; y++) {
         ShipMoveData *shipDatum = &(shipData[y]);
-        if (!shipDatum->stopped) {
-          shipDatum->shipCircle->setPosition(
-              shipDatum->nextShipCircle->h(), shipDatum->nextShipCircle->k());
+        if (ships[y]->alive) {      
+          for (int z = 0; z < y; z++) {
+            if (ships[z]->alive) {
+              ShipMoveData *shipDatum2 = &(shipData[z]);
+              if (shipDatum->nextShipCircle->overlaps(shipDatum2->nextShipCircle)) {
+                double ttc = timeToFirstShipCollision(*shipDatum, ships[y], *shipDatum2, ships[z]);
+//                std::cout << "ttc " << ttc << '\n';
+//                std::cout << '\n';
+                if (ttc < timeToFirstCollision) {
+                  timeToFirstCollision = ttc;
+                  typeFirstCollision = 1;
+                  indFirstCollidingShip = y;
+                  indFirstCollidingShip2 = z;
+                }
+              }
+            }
+          }
         }
       }
-    }
-  }
-
-  // Calculate impact of wall collisions.
-  for (int x = 0; x < numShips; x++) {
-    if (ships[x]->alive) {
-      ShipMoveData *shipDatum = &(shipData[x]);
-      if (shipDatum->wallCollision) {
-        Ship *ship = ships[x];
-        Ship *oldShip = oldShips[x];
-        ship->hitWall = true;
-        ship->x = shipDatum->shipCircle->h();
-        ship->y = shipDatum->shipCircle->k();
-        if (shipStopped(oldShip, ship)) {
-          shipDatum->xSpeed = shipDatum->dxSpeed;
-          shipDatum->ySpeed = shipDatum->dySpeed;
-          setSpeedAndHeading(oldShip, ship, shipDatum);
+      
+      // To the time push until first collision any ship does
+      double timeDo = fmin(timeToFirstCollision, timeToDo);
+      timeToDo -= timeDo;
+      for (int kk = 0; kk < numShips; kk++) {
+        if (ships[kk]->alive) {
+          ShipMoveData *shipDatum = &(shipData[kk]);
+          Ship *ship = ships[kk];
+          shipDatum->shipCircle->setPosition(
+              shipDatum->shipCircle->h() + shipDatum->xSpeed*timeDo + 0.5*shipDatum->dxSpeed*timeDo*timeDo,
+              shipDatum->shipCircle->k() + shipDatum->ySpeed*timeDo + 0.5*shipDatum->dySpeed*timeDo*timeDo);  
+          shipDatum->xSpeed += shipDatum->dxSpeed*timeDo;
+          shipDatum->ySpeed += shipDatum->dySpeed*timeDo;
+          ship->x = shipDatum->shipCircle->h();
+          ship->y = shipDatum->shipCircle->k();
+          setSpeedAndHeading(oldShips[kk], ship, shipDatum);
         }
-        double bounceForce = abs(ship->speed * cos(shipDatum->minWallImpactDiff)
-            * (1 + WALL_BOUNCE));
-        double bounceAngle = shipDatum->wallImpactAngle + M_PI;
+      }
+      
+      if (typeFirstCollision == 0) {  // Wall collision
+        ShipMoveData *shipDatum = &(shipData[indFirstCollidingShip]);
+        Ship *ship = ships[indFirstCollidingShip];
+        Line2D *line = shipDatum->wallImpactLine;
+        ship->hitWall = true;
+        double heading = ship->heading;
+        double angle1 = line->theta() - M_PI_2;
+        double angleDiff1 = abs(normalRelativeAngle(heading - angle1));
+        double angle2 = line->theta() + M_PI_2;
+        double angleDiff2 = abs(normalRelativeAngle(heading - angle2));
+        double angle, angleDiff = M_PI;
+        if (angleDiff1 < angleDiff) {
+          angleDiff = angleDiff1;
+          angle = angle1;
+        }
+        if (angleDiff2 < angleDiff) {
+          angleDiff = angleDiff2;
+          angle = angle2;
+        }
+        double bounceForce = abs(ship->speed * cos(angleDiff) * (1 + WALL_BOUNCE));
+        double bounceAngle = angle + M_PI;
         shipDatum->xSpeed += cos(bounceAngle) * bounceForce;
         shipDatum->ySpeed += sin(bounceAngle) * bounceForce;
-        setSpeedAndHeading(oldShip, ship, shipDatum);
         for (int z = 0; z < numEventHandlers_; z++) {
-          eventHandlers_[z]->handleShipHitWall(
-              ship, bounceAngle, bounceForce, gameTime);
+          eventHandlers_[z]->handleShipHitWall(ship, bounceAngle, bounceForce, gameTime); // TODO update ship?
+        }
+        setSpeedAndHeading(oldShips[indFirstCollidingShip], ship, shipDatum);
+        
+      } else if (typeFirstCollision == 1) {  // Ship-Ship collision
+      
+        // Update x/y/heading/speeds for ships with ship-ship collisions.
+        ShipMoveData *shipDatum = &(shipData[indFirstCollidingShip]);
+        ShipMoveData *shipDatum2 = &(shipData[indFirstCollidingShip2]);
+        Ship *ship = ships[indFirstCollidingShip];
+        Ship *ship2 = ships[indFirstCollidingShip2];
+
+        ship->hitShip = true;
+        ship2->hitShip = true;
+
+        double angle = atan2(ship2->y - ship->y, ship2->x - ship->x);
+        double force = cos(ship->heading - angle) * ship->speed + 
+                       cos(ship2->heading - angle - M_PI) * ship2->speed;
+        double xForce = cos(angle) * force;
+        double yForce = sin(angle) * force;
+        shipDatum->xSpeed -= xForce;
+        shipDatum->ySpeed -= yForce;
+        setSpeedAndHeading(oldShips[indFirstCollidingShip], ship, shipDatum);
+        shipDatum2->xSpeed += xForce;
+        shipDatum2->ySpeed += yForce;
+        setSpeedAndHeading(oldShips[indFirstCollidingShip2], ship2, shipDatum2);
+
+        for (int z = 0; z < numEventHandlers_; z++) {
+          // TODO not sure if both necessary, but I think that's how it was before as well
+          eventHandlers_[z]->handleShipHitShip(ship, ship2,
+              angle, force,
+              normalRelativeAngle(angle-M_PI), force, gameTime);
+          eventHandlers_[z]->handleShipHitShip(ship2, ship,
+              normalRelativeAngle(angle-M_PI), force,
+              angle, force, gameTime);
         }
       }
+//      if (typeFirstCollision >= 0) {
+//        std::cout << "gameTime " << gameTime << '\n';
+//        std::cout << "gameTime Sub " << x*dtSub << ' ' << (x+1)*dtSub << '\n';
+//        std::cout << "timeToDo " << timeToDo << '\n';
+//        std::cout << "timeDo " << timeDo << '\n';
+//        std::cout << "typeFirstCollision " << typeFirstCollision << '\n';
+//        std::cout << "timeToFirstCollision " << timeToFirstCollision << '\n';
+//        std::cout << "shipData[0] " << shipData[0].shipCircle->h() << " " << shipData[0].shipCircle->k() << '\n';
+//        std::cout << "shipData[1] " << shipData[1].shipCircle->h() << " " << shipData[1].shipCircle->k() << '\n';
+//        std::cout << '\n';
+//      }
     }
   }
 
-  // Update x/y/heading/speeds for ships with ship-ship collisions.
-  for (int x = 0; x < numShips; x++) {
-    ShipMoveData *shipDatum = &(shipData[x]);
-    if (ships[x]->alive && shipDatum->shipCollision) {
-      Ship *ship = ships[x];
-      ship->hitShip = true;
-      ship->x = shipDatum->shipCircle->h();
-      ship->y = shipDatum->shipCircle->k();
-      if (shipStopped(oldShips[x], ship)) {
-        shipDatum->xSpeed = shipDatum->dxSpeed;
-        shipDatum->ySpeed = shipDatum->dySpeed;
-        setSpeedAndHeading(oldShips[x], ship, shipDatum);
-      }
-    }
-  }
 
-  // Calculate momentum to be transferred between all colliding ships.
-  for (int x = 0; x < numShips; x++) {
-    ShipMoveData *shipDatum = &(shipData[x]);
-    Ship *ship = ships[x];
-    if (ship-> alive && shipDatum->shipCollision) {
-      double totalForce = 0;
-      for (int y = 0; y < numShips; y++) {
-        if (x != y && ships[y]->alive) {
-          ShipCollisionData *collisionData = shipDatum->shipCollisionData[y];
-          if (collisionData != 0) {
-            collisionData->angle =
-                atan2(ships[y]->y - ship->y, ships[y]->x - ship->x);
-            collisionData->force =
-                cos(ship->heading - collisionData->angle) * ship->speed;
-            totalForce += collisionData->force;
-          }
-        }
-      }
-      if (totalForce > ship->speed) {
-        for (int y = 0; y < numShips; y++) {
-          if (x != y) {
-            ShipCollisionData *collisionData = shipDatum->shipCollisionData[y];
-            if (collisionData != 0) {
-              collisionData->force *= ship->speed / totalForce;
-            }
-          }
-        }
-      }
-    }
-  }
 
-  // Apply momentum transfers.
-  for (int x = 0; x < numShips; x++) {
-    ShipMoveData *shipDatum = &(shipData[x]);
-    if (ships[x]->alive && shipDatum->shipCollision) {
-      for (int y = 0; y < numShips; y++) {
-        if (x != y && ships[y]->alive) {
-          ShipMoveData *shipDatum2 = &(shipData[y]);
-          ShipCollisionData *collisionData = shipDatum->shipCollisionData[y];
-          if (collisionData != 0) {
-            double xForce = cos(collisionData->angle) * collisionData->force;
-            double yForce = sin(collisionData->angle) * collisionData->force;
-            shipDatum->xSpeed -= xForce;
-            shipDatum->ySpeed -= yForce;
-            setSpeedAndHeading(oldShips[x], ships[x], shipDatum);
-            shipDatum2->xSpeed += xForce;
-            shipDatum2->ySpeed += yForce;
-            setSpeedAndHeading(oldShips[y], ships[y], shipDatum2);
-
-            ShipCollisionData *collisionData2 =
-                shipDatum2->shipCollisionData[x];
-            for (int z = 0; z < numEventHandlers_; z++) {
-              eventHandlers_[z]->handleShipHitShip(ships[x], ships[y],
-                  collisionData->angle, collisionData->force,
-                  collisionData2->angle, collisionData2->force, gameTime);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Check for laser-ship collisions, laser-wall collisions, log destroys and
-  // damage, remove dead lasers.
-  bool **laserHits = new bool*[numShips];
-  for (int x = 0; x < numShips; x++) {
-    laserHits[x] = new bool[numShips];
-    for (int y = 0; y < numShips; y++) {
-      laserHits[x][y] = false;
-    }
-  }
-  bool *wasAlive = new bool[numShips];
-  for (int x = 0; x < numShips; x++) {
-    wasAlive[x] = ships[x]->alive;
-  }
 
   // For lasers fired this tick, check if they intersect any other ships at
   // their initial position (0-25 from origin) before moving the first time.
@@ -998,6 +1217,8 @@ void Stage::moveAndCheckCollisions(
   checkLaserShipCollisions(ships, shipData, numShips, laserHits, numLasers_,
                            gameTime, false);
 
+  // Scoring for destroyed by laser for ships
+  // @ohaas: Can be done outside of sub tick move
   for (int x = 0; x < numShips; x++) {
     Ship *ship = ships[x];
     if (wasAlive[x] && !ship->alive) {
@@ -1056,10 +1277,13 @@ void Stage::moveAndCheckCollisions(
       x--;
     }
   }
+
+  // Delete laser hit logs
   for (int x = 0; x < numShips; x++) {
     delete laserHits[x];
   }
   delete laserHits;
+
 
   // Move torpedoes and check for collisions.
   for (int x = 0; x < numShips; x++) {
@@ -1182,12 +1406,12 @@ void Stage::moveAndCheckCollisions(
     if (shipDatum->initialized) {
       delete shipDatum->shipCircle;
       delete shipDatum->nextShipCircle;
-      for (int y = 0; y < numShips; y++) {
-        ShipCollisionData *collisionData = shipDatum->shipCollisionData[y];
-        if (collisionData != 0) {
-          delete collisionData;
-        }
-      }
+//      for (int y = 0; y < numShips; y++) {
+//        ShipCollisionData *collisionData = shipDatum->shipCollisionData[y];
+//        if (collisionData != 0) {
+//          delete collisionData;
+//        }
+//      }
       delete shipDatum->shipCollisionData;
     }
   }
