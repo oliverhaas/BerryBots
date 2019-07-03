@@ -42,7 +42,7 @@ As of now it's a work-in-progress, but they are mainly:
   with user code, etc. will still stay discretized as up to now. For non-relativistic kinematics (see below)
   the integration/time stepping is exact with Verlet integration, since we only have piecewise constant
   accelerations (except for collisions of course). Collisions are now calculated with analytical formulas,
-  since we only have circles and lines this works well. However, if this has to be generalized to relativistic
+  since we only have circles and lines this works well. WIP: However, if this has to be generalized to relativistic
   kinematics there are not really analytical solutions and it's probably better to change this to something 
   like a bisection search or similar.
 - DONE: Include collision damage for both ship-wall and ship-ship collisions. WIP: Hopefully there is an
