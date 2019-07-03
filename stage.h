@@ -218,29 +218,31 @@ class Stage {
     int clearStaleUserGfxTexts(int gameTime, UserGfxText** gfxTexts,
                                int numTexts);
                                
-    double timeToFirstWallCollision(ShipMoveData shipDatum, Ship *ship, Line2D* wall);
-    double timeToFirstShipCollision(ShipMoveData shipDatum, Ship *ship, ShipMoveData shipDatum2, Ship *ship2);
-    void timeToFirstTorpedoExplosion(double *timeToFirstExplosion, int *torpedoIndex);
-
+    double timeToFirstShipWallCollision(
+        Ship **ships, ShipMoveData *shipData, int numShips, double *timeToFirstEvent,
+        int *indexShipWallFirstCollided, int *indexWallShipFirstCollided,
+        int *wallEndpoint, int *typeFirstEvent);
+    double timeToFirstShipShipCollision(
+        Ship **ships, ShipMoveData *shipData, int numShips, double *timeToFirstEvent,
+        int *indexShipShipFirstCollided, int *indexShipShipFirstCollided2, int *typeFirstEvent);
+    void timeToFirstTorpedoExplosion(
+        double *timeToFirstEvent, int *torpedoIndex, int* typeFirstEvent);
+    
+    void nudgeShip(Ship *oldShip, Ship *ship, ShipMoveData *shipDatum, double angle);
+    void doWallCollision(Ship *oldShip, Ship *ship, ShipMoveData *shipDatum, Line2D *wall,
+                         int gameTime);
+    void doWallEndpointCollision(Ship *oldShip, Ship *ship, ShipMoveData *shipDatum, Line2D *wall,
+                                 int wallEndpoint, int gameTime);
+    void doShipShipCollision(Ship **oldShips, Ship **ships, ShipMoveData *shipData, 
+                             int indexShipShipFirstCollided, int indexShipShipFirstCollided2,
+                             int gameTime);
+                                
     void pushShips(Ship **oldShips, Ship **ships, ShipMoveData *shipData, int numShips, double dt);
     void pushLasers(double dt);
     void pushTorpedos(double dt);
     void explodeTorpedo(Ship **oldShips, Ship **ships, ShipMoveData *shipData, int numShips,
                         int torpedoIndex, bool **torpedoHits, int gameTime);
     
-    void solveQuadratic(double aa, double bb, double cc, double *t1, double *t2);
-    double getPosMin(double aa, double bb);
-    double getPosMin(double aa, double bb, double cc, double dd);
-    void solveCubic(double aa, double bb, double cc, double dd,
-      double *t1, double *t2, double *t3);
-    void solveQuartic(double aa, double bb, double cc, double dd, double ee, 
-      double *t1, double *t2, double *t3, double *t4);
-
-    std::complex<double> solveCubicHelper(double bb, double cc, double dd, 
-      std::complex<double> pp, std::complex<double> qq, std::complex<double> rr);
-    std::complex<double> solveQuarticHelper(double bb, double cc, double dd, double ee,
-      std::complex<double> pp, std::complex<double> qq, std::complex<double> rr, std::complex<double> ss);
-    double approxReal(std::complex<double> pp, double eps);
     
 };
 

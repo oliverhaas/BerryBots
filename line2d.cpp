@@ -21,6 +21,8 @@
 #include <math.h>
 #include <float.h>
 #include <algorithm>
+#include <iostream>
+#include <limits>
 #include "bbutil.h"
 #include "line2d.h"
 
@@ -42,8 +44,12 @@ Line2D::Line2D(double x1, double y1, double x2, double y2) {
   y1_ = y1;
   x2_ = x2;
   y2_ = y2;
-  theta_ = DBL_MIN;
+  theta_ = std::numeric_limits<double>::quiet_NaN();
   inverse_ = 0;
+  
+  nx_ = 0;
+  ny_ = 0;
+  defaultEps_ = 1.e-12;
 }
 
 double Line2D::m() {
@@ -87,7 +93,7 @@ double Line2D::yMax() {
 }
 
 double Line2D::theta() {
-  if (theta_ == DBL_MIN) {
+  if (std::isnan(theta_)) {
     theta_ = atan2(y2_ - y1_, x2_ - x1_);
   }
   return theta_;
@@ -106,6 +112,38 @@ void Line2D::shift(double dx, double dy) {
     inverse_->shift(dy, dx);
   }
 }
+
+double Line2D::distance(double xx, double yy) {
+  double aa = y2_ - y1_;
+  double bb = x2_ - x1_;
+  double cc = x2_*y1_ - y2_*x1_;
+  return abs(aa*xx-bb*yy+cc)/sqrt(aa*aa+bb*bb);
+}
+
+double Line2D::distance(Point2D *point) {
+  return distance(point->getX(), point->getY());
+}
+
+bool Line2D::contains(double xx, double yy, double eps) {
+  if (xx >= xMin_ - eps && xx <= xMax_ + eps && 
+      yy >= yMin_ - eps && yy <= yMax_ + eps && 
+      distance(xx,yy) < eps) {
+    return true;
+  } 
+  return false;
+}
+
+bool Line2D::contains(double xx, double yy) {
+  return contains(xx, yy, defaultEps_);
+}
+
+//bool Line2D::contains(Point2D *point, double eps) {
+//  return contains(point->getX(), point->getY(), eps);
+//}
+
+//bool Line2D::contains(Point2D *point) {
+//  return contains(point->getX(), point->getY(), defaultEps_);
+//}
 
 Line2D* Line2D::getInverse() {
   if (inverse_ == 0) {

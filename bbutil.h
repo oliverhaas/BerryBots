@@ -21,6 +21,7 @@
 #ifndef BBUTIL_H
 #define BBUTIL_H
 
+#include <complex>
 #include <platformstl/performance/performance_counter.hpp>
 #include "bbconst.h"
 
@@ -339,5 +340,19 @@ extern char** parseFlag(
 extern bool flagExists(int argc, char *argv[], const char *flag);
 extern bool isWhitespace(const char *s);
 extern char* getTimestamp();
+
+extern double approxReal(std::complex<double> zz, double epsRel, double epsAbs);
+extern double getPosMin(double aa, double bb);
+extern double getPosMin(double aa, double bb, double cc, double dd);
+
+extern void solveQuadratic(double aa, double bb, double cc, double *t1, double *t2);
+extern void solveCubic(
+    double aa, double bb, double cc, double dd,
+    double *t1, double *t2, double *t3);
+extern void solveQuartic(
+    double aa, double bb, double cc, double dd, double ee, 
+    double *t1, double *t2, double *t3, double *t4);
+
+
 
 #endif

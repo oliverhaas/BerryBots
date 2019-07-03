@@ -68,9 +68,8 @@
 
 // @ohaas: Some new constants for new physics.
 #define SHIP_SHIP_BOUNCE      0.5
-#define WALL_DMG_SCALE        0.01
-#define SHIPSHIP_DMG_SCALE    0.01
-#define SPEED_OF_LIGHT        100
+#define WALL_DMG_SCALE        0.02
+#define SHIPSHIP_DMG_SCALE    0.02
 
 #if defined(_WIN32)
 #define BB_DIRSEP      "\\"

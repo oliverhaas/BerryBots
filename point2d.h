@@ -25,10 +25,12 @@ class Point2D {
   double x_, y_;
   public:
     Point2D(double x, double y);
+//    ~Point2D();
     double getX();
     double getY();
     double distanceSq(Point2D p);
     double distance(Point2D p);
+//    Point2D* getInverse();
 };
 
 #endif

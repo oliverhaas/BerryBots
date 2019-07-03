@@ -25,6 +25,7 @@
 Point2D::Point2D(double x, double y) {
   x_ = x;
   y_ = y;
+//  inverse_ != 0;
 }
 
 double Point2D::getX() {
@@ -43,3 +44,15 @@ double Point2D::distance(Point2D p) {
   return sqrt(distanceSq(p));
 }
 
+//Point2D* Point2D::getInverse() {
+//  if (inverse_ == 0) {
+//    inverse_ = new Point2D(this->y(), this->x());
+//  }
+//  return inverse_;
+//}
+
+//Point2D::~Point2D() {
+//  if (inverse_ != 0) {
+//    delete inverse_;
+//  }
+//}
