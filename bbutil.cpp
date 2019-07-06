@@ -290,5 +290,74 @@ void solveQuartic(
 
 
 
+// See Numerical Recipes "safe" Newton's method
+int newtonBisect(rootFun fun, double* xStart, void* params, double* out, double epsRel, double epsAbs) {
 
+  double dx, dxold;
+  double ff[2];
+  double fh[2];
+  double fl[2];
+  double temp, xh, xl, rts;
+  int maxIter = 1000;
 
+  fun(&xStart[0], params, fl);
+  fun(&xStart[1], params, fh);
+  if (fl[0]*fh[0] > 0.) {
+    return -1;
+  } else if (fl[0] == 0.) {
+    out[0] = xStart[0];
+    return 1;
+  } else if (fh[0] == 0.) {
+    out[0] = xStart[1];
+    return 1;
+  }
+  
+  if (fl[0] < 0.) {
+    xl = xStart[0];
+    xh = xStart[1];
+  } else {
+    xh = xStart[0];
+    xl = xStart[1];
+  }
+
+  rts = 0.5*(xl+xh);
+  dxold = abs(xh-xl);
+  dx = dxold;
+  fun(&rts, params, ff);
+  
+  for (int ii = 0; ii <= maxIter; ii++) {
+    if ( (((rts-xh)*ff[1]-ff[0])*((rts-xl)*ff[1]-ff[0]) > 0.0) or 
+         (abs(2.0*ff[0]) > fabs(dxold*ff[1])) ) {
+      dxold = dx;
+      dx = 0.5*(xh-xl);
+      rts = xl+dx;
+      if (xl == rts) {
+        out[0] = rts;
+        return 1;
+      }
+    } else {
+      dxold = dx;
+      dx = ff[0]/ff[1];
+      temp = rts;
+      rts -= dx;
+      if (temp == rts) {
+        out[0] = rts;
+        return 1;
+      }
+    }
+    if (abs(dx) < epsAbs + epsRel*abs(rts)) {
+      out[0] = rts;
+      return 1;
+    }
+        
+    fun(&rts, params, ff);
+    if (ff[0] < 0.0) {
+      xl = rts;
+    } else {
+      xh = rts;
+    }
+  }
+
+//    # Only reachable if ii == maxIter. Convergence failed.
+    return -2;
+}

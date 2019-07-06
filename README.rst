@@ -39,19 +39,24 @@ As of now it's a work-in-progress, but they are mainly:
 
 - DONE: Improve time stepping of movements so they approximate more closely continuous time physics rather
   than introducing unintuitive discretization errors (e.g. in collisions). Sensors, interaction
-  with user code, etc. will still stay discretized as up to now. For non-relativistic kinematics (see below)
-  the integration/time stepping is exact with Verlet integration, since we only have piecewise constant
-  accelerations (except for collisions of course). Collisions are now calculated with analytical formulas,
-  since we only have circles and lines this works well. WIP: However, if this has to be generalized to relativistic
-  kinematics there are not really analytical solutions and it's probably better to change this to something 
-  like a bisection search or similar.
-- DONE: Include collision damage for both ship-wall and ship-ship collisions. WIP: Hopefully there is an
-  easy way to make it switchable from the stage.
-- WIP: Maybe change movement physics from non-relativistic to relativistic. This should for one limit
-  the maximum velocity, and maybe introduce interesting challenges for fast moving bots, mainly
-  in very large stages. If the "speed of light" is chosen large enough, the normal stages wouldn't 
-  be affected. Here I would probably need different time stepping algorithms (e.g. Runge-Kutta instead of
-  Verlet),
+  with user code, etc. will still stay discretized as in original berrybots. For both non-relativistic and relativistic kinematics (see below)
+  the integration/time stepping is exact to up to machine precision, since we only have piecewise constant
+  accelerations (except for collisions and torpedos of course). I rewrote a little bit more stuff than necessary,
+  but the plus side it's both more accurate and faster than the original berrybots calculations.
+- DONE: Include collision damage for both ship-wall and ship-ship collisions. It's switchable from stage 
+  (setWallCollDamage() and setShipShipCollDamage()). Wall collision damage is especially useful, since it
+  limits maximum velocities of ships from a gameplay point of view and discourages colliding with walls,
+  which both are abusable from my point of view in the original berrybots (especially combined with the
+  wall collision physics as discussed above).
+- DONE: Both non-relativistic to relativistic kinematics are available. Relativistic kinematics should 
+  for one limit the maximum velocity in a natural/real-life-physical way, and maybe introduce interesting
+  challenges for advanced bots. Both the "speed of light" of the game and the laser speed were set to 30
+  in this fork, but in principle they can be chosen independently.
+- MAYBE: Change the weapon and energy system. I'm thinking about maybe adding another weapon (ion gun, 
+  bevaviour somewhere in-between torpedos and lasers) and have "shields" and "hull" instead of just
+  energy. And maybe have so ressource system for weapon firing, e.g. firing a laser costs 3 ressource and
+  ion gun costs 5, and ressource only replenishes 1 each tick. I'll have to see if it really improves the
+  game or not... But as of now I think the damage and weapon part of the game needs a little bit more depth.
 
 
 

@@ -51,6 +51,9 @@ BerryBotsEngine::BerryBotsEngine(PrintHandler *printHandler,
   stageConfigureComplete_ = false;
   shipInitComplete_ = false;
   battleMode_ = false;
+  relativistic_ = true;
+  wallCollDamage_ = true;
+  shipShipCollDamage_ = true;
   roundOver_ = false;
   gameOver_ = false;
   physicsOver_ = false;
@@ -234,6 +237,30 @@ void BerryBotsEngine::setBattleMode(bool battleMode) {
 
 bool BerryBotsEngine::isBattleMode() {
   return battleMode_;
+}
+
+void BerryBotsEngine::setRelativistic(bool relativistic) {
+  relativistic_ = relativistic;
+}
+
+bool BerryBotsEngine::isRelativistic() {
+  return relativistic_;
+}
+
+void BerryBotsEngine::setWallCollDamage(bool wallCollDamage) {
+  wallCollDamage_ = wallCollDamage;
+}
+
+bool BerryBotsEngine::isWallCollDamage() {
+  return wallCollDamage_;
+}
+
+void BerryBotsEngine::setShipShipCollDamage(bool shipShipCollDamage) {
+  shipShipCollDamage_ = shipShipCollDamage;
+}
+
+bool BerryBotsEngine::isShipShipCollDamage() {
+  return shipShipCollDamage_;
 }
 
 void BerryBotsEngine::setRoundOver(bool roundOver) {
@@ -566,6 +593,11 @@ void BerryBotsEngine::initStage(const char *stagesBaseDir,
   }
   replayHandler_ = new ReplayEventHandler(replayBuilder_);
   stage_->addEventHandler(replayHandler_);
+  
+  stage_->setRelativistic(relativistic_);
+  stage_->setWallCollDamage(wallCollDamage_);
+  stage_->setShipShipCollDamage(shipShipCollDamage_);
+  
 }
 
 // Loads the teams in the files specified in teamNames from the root directory
@@ -874,7 +906,8 @@ void BerryBotsEngine::initShips(const char *shipsBaseDir, char **teamNames,
 
 void BerryBotsEngine::initShipRound(Ship *ship) {
   ship->alive = (!ship->properties->disabled && !ship->properties->stageShip);
-  ship->speed = ship->heading = ship->thrusterAngle = ship->thrusterForce = 0;
+  ship->speed = ship->momentum = ship->heading = 
+    ship->thrusterAngle = ship->thrusterForce = 0;
   ship->energy = DEFAULT_ENERGY;
   ship->laserGunHeat = LASER_HEAT;
   ship->torpedoGunHeat = TORPEDO_HEAT;

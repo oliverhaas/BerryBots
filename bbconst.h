@@ -39,7 +39,7 @@
 #define STAGE_MARGIN          25
 #define SHIP_RADIUS           8
 #define SHIP_SIZE             SHIP_RADIUS * 2
-#define LASER_SPEED           25
+#define LASER_SPEED           30  // Doesn't has to be same as SPEED_OF_LIGHT, but makes sense obviously
 #define LASER_HEAT            5
 #define LASER_DAMAGE          4
 #define TORPEDO_SPEED         12
@@ -70,6 +70,8 @@
 #define SHIP_SHIP_BOUNCE      0.5
 #define WALL_DMG_SCALE        0.02
 #define SHIPSHIP_DMG_SCALE    0.02
+#define SPEED_OF_LIGHT        30      // When relativistic kinematics, this is max speed of ships
+#define DEFAULT_EPS           1.e-6   
 
 #if defined(_WIN32)
 #define BB_DIRSEP      "\\"

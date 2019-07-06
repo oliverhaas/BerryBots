@@ -25,7 +25,7 @@
 
 class Line2D {
   double m_, b_, xMin_, xMax_, yMin_, yMax_, x1_, y1_, x2_, y2_, theta_;
-  double defaultEps_, nx_, ny_;
+  double defaultEps_, nx_, ny_, pp_;
   Line2D *inverse_;
   public:
     Line2D(double x1, double y1, double x2, double y2);
@@ -43,9 +43,12 @@ class Line2D {
     double theta();
     void shift(double dx, double dy);
     double distance(double xx, double yy);
-    double distance(Point2D *point);
+    double signedDistance(double xx, double yy);
     bool contains(double xx, double yy, double eps);
     bool contains(double xx, double yy);
+    double nx();
+    double ny();
+    double pp();
     Line2D *getInverse();
     bool intersects(Line2D *line);
 };

@@ -40,29 +40,10 @@
 #define MAX_EVENT_HANDLERS  8
 
 typedef struct {
-  double angle;
-  double force;
-} ShipCollisionData;
-
-typedef struct {
   bool initialized;
-  double startXSpeed;
-  double startYSpeed;
-  double xSpeed;
-  double ySpeed;
-  double dxSpeed;
-  double dySpeed;
-  double dx;
-  double dy;
-  Circle2D *shipCircle;
-  Circle2D *nextShipCircle;
-  bool wallCollision;
-  double minWallImpactDiff;
-  double wallImpactAngle;
-  Line2D *wallImpactLine;
-  bool shipCollision;
-  ShipCollisionData** shipCollisionData;
-  bool stopped;
+  double coords[8];
+  Circle2D *circ;
+  Circle2D *nextCirc;
 } ShipMoveData;
 
 class Stage {
@@ -103,6 +84,15 @@ class Stage {
   int nextLaserId_;
   int nextTorpedoId_;
 
+  bool relativistic_;
+  bool wallCollDamage_;
+  bool shipShipCollDamage_;
+  // Relativistic and non relativistic kinematics use some different functions
+  void (*pushFun_)(double, double*, double*);
+  void (*momentumToVelocity_)(double, double, double*, double*);
+  void (*velocityToMomentum_)(double, double, double*, double*);
+  double (*kineticEnergy_)(double, double);
+  
   public:
     Stage(int width, int height);
     ~Stage();
@@ -119,6 +109,11 @@ class Stage {
     Line2D** getWallLines();
     int getWallLinesCount();
 
+    // Some game physics setup functions
+    void setRelativistic(bool relativistic);
+    void setWallCollDamage(bool wallCollDamage);
+    void setShipShipCollDamage(bool shipShipCollDamage);
+    
     int addZone(int left, int bottom, int width, int height, const char *tag);
     Zone** getZones();
     int getZoneCount();
@@ -196,11 +191,10 @@ class Stage {
     void reset(int time);
   private:
     void checkLaserShipCollisions(Ship **ships, ShipMoveData *shipData,
-        int numShips, bool **laserHits, int numLasers, int gameTime,
-        bool firstTickLasers);
+        int numShips, bool **laserHits, int gameTime, bool firstTickLasers);
     bool isShipInWall(double x, double y);
     bool isShipInShip(int shipIndex, double x, double y);
-    void setSpeedAndHeading(Ship *oldShip, Ship *ship, ShipMoveData *shipData);
+    void setShipData(Ship *oldShip, Ship *ship, ShipMoveData *shipData);
     bool shipStopped(Ship *ship1, Ship *ship2);
     bool hasVision(Line2D *visionLine);
     bool inZone(Ship *ship, Zone *zone);
@@ -242,8 +236,44 @@ class Stage {
     void pushTorpedos(double dt);
     void explodeTorpedo(Ship **oldShips, Ship **ships, ShipMoveData *shipData, int numShips,
                         int torpedoIndex, bool **torpedoHits, int gameTime);
+                        
+    
     
     
 };
+
+void relMomToVel(double px, double py, double *vx, double *vy);
+void relVelToMom(double vx, double vy, double *px, double *py);
+double relKinEnergy(double px, double py);
+void nonRelMomToVel(double px, double py, double *vx, double *vy);
+void nonRelVelToMom(double vx, double vy, double *px, double *py);
+double nonRelKinEnergy(double px, double py);
+void nonRelPushFun(double tt, double* coords0, double* coordsT);
+void relPushFun(double tt, double* coords0, double* coordsT);
+
+typedef struct {
+  ShipMoveData *smd;
+  ShipMoveData *smd2;
+  void (*pushFun)(double, double*, double*);
+} ShipShipRootStruct;
+int shipShipRootFun(double* tt, void* params, double* out);
+
+typedef struct {
+  ShipMoveData *smd;
+  void (*pushFun)(double, double*, double*);
+  Line2D *wall;
+} WallRootStruct;
+int wallRootFun(double* tt, void* params, double* out);
+
+typedef struct {
+  ShipMoveData *smd;
+  void (*pushFun)(double, double*, double*);
+  double xp;
+  double yp;
+} WallEndpointRootStruct;
+int wallEndpointRootFun(double* tt, void* params, double* out);
+
+
+
 
 #endif

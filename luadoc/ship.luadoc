@@ -106,7 +106,7 @@ function setName(name)
 -- @param teamName The name of the team this ship is part of.
 function setTeamName(teamName)
 
---- Sets the color of the ship's hull, in RGB (0-255). This function can only
+--- Sets the color of the ship's energy, in RGB (0-255). This function can only
 -- be called during <code>init</code> or when debugging graphics are enabled.
 -- @param r The amount of red, from 0 to 255.
 -- @param g The amount of green, from 0 to 255.

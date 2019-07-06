@@ -242,6 +242,12 @@ int Ship_speed(lua_State *L) {
   return 1;
 }
 
+int Ship_momentum(lua_State *L) {
+  Ship *ship = checkShip(L, 1);
+  lua_pushnumber(L, ship->speed);
+  return 1;
+}
+
 int Ship_energy(lua_State *L) {
   Ship *ship = checkShip(L, 1);
   lua_pushnumber(L, ship->energy);
@@ -428,6 +434,7 @@ const luaL_Reg Ship_methods[] = {
   {"y",                 Ship_y},
   {"heading",           Ship_heading},
   {"speed",             Ship_speed},
+  {"momentum",          Ship_momentum},
   {"energy",            Ship_energy},
   {"laserGunHeat",      Ship_laserGunHeat},
   {"torpedoGunHeat",    Ship_torpedoGunHeat},
@@ -461,6 +468,7 @@ void pushVisibleEnemyShips(
       setField(L, "y", ship->y);
       setField(L, "heading", ship->heading);
       setField(L, "speed", ship->speed);
+      setField(L, "momentum", ship->momentum);
       setField(L, "energy", ship->energy);
       setField(L, "isStageShip", ship->properties->stageShip);
       setField(L, "name", ship->properties->name);
@@ -982,6 +990,54 @@ int StageBuilder_setBattleMode(lua_State *L) {
   return 1;
 }
 
+int StageBuilder_setRelativistic(lua_State *L) {
+  StageBuilder *stageBuilder = checkStageBuilder(L, 1);
+  bool relativistic = lua_toboolean(L, 2);
+
+  BerryBotsEngine *engine = stageBuilder->engine;
+  if (engine->isStageConfigureComplete()) {
+    luaL_error(L, "Can't set to relativistic kinematics outside of 'configure' function.");
+  } else {
+    engine->setRelativistic(relativistic);
+    std::stringstream ss;
+    ss << "== Set relativistic kinematics: " << (relativistic ? "true" : "false");
+    engine->stagePrint(ss.str().c_str());
+  }
+  return 1;
+}
+
+int StageBuilder_setWallCollDamage(lua_State *L) {
+  StageBuilder *stageBuilder = checkStageBuilder(L, 1);
+  bool wallCollDamage = lua_toboolean(L, 2);
+
+  BerryBotsEngine *engine = stageBuilder->engine;
+  if (engine->isStageConfigureComplete()) {
+    luaL_error(L, "Can't set wall collision damage outside of 'configure' function.");
+  } else {
+    engine->setWallCollDamage(wallCollDamage);
+    std::stringstream ss;
+    ss << "== Set wall collision damage: " << (wallCollDamage ? "true" : "false");
+    engine->stagePrint(ss.str().c_str());
+  }
+  return 1;
+}
+
+int StageBuilder_setShipShipCollDamage(lua_State *L) {
+  StageBuilder *stageBuilder = checkStageBuilder(L, 1);
+  bool shipShipCollDamage = lua_toboolean(L, 2);
+
+  BerryBotsEngine *engine = stageBuilder->engine;
+  if (engine->isStageConfigureComplete()) {
+    luaL_error(L, "Can't set ship-ship collision damage outside of 'configure' function.");
+  } else {
+    engine->setShipShipCollDamage(shipShipCollDamage);
+    std::stringstream ss;
+    ss << "== Set ship-ship collision damage: " << (shipShipCollDamage ? "true" : "false");
+    engine->stagePrint(ss.str().c_str());
+  }
+  return 1;
+}
+
 int StageBuilder_addWall(lua_State *L) {
   StageBuilder *stageBuilder = checkStageBuilder(L, 1);
   int left = luaL_checkint(L, 2);
@@ -1082,6 +1138,9 @@ int StageBuilder_setTeamSize(lua_State *L) {
 const luaL_Reg StageBuilder_methods[] = {
   {"setSize",        StageBuilder_setSize},
   {"setBattleMode",  StageBuilder_setBattleMode},
+  {"setRelativistic",  StageBuilder_setRelativistic},
+  {"setWallCollDamage",  StageBuilder_setWallCollDamage},
+  {"setShipShipCollDamage",  StageBuilder_setShipShipCollDamage},
   {"addWall",        StageBuilder_addWall},
   {"addStart",       StageBuilder_addStart},
   {"addZone",        StageBuilder_addZone},

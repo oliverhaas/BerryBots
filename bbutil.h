@@ -215,6 +215,7 @@ typedef struct {
   double y;
   double heading;
   double speed;
+  double momentum;
   double energy;
   short laserGunHeat;
   short torpedoGunHeat;
@@ -353,6 +354,7 @@ extern void solveQuartic(
     double aa, double bb, double cc, double dd, double ee, 
     double *t1, double *t2, double *t3, double *t4);
 
-
+typedef int (*rootFun)(double* xx, void* params, double* out);
+extern int newtonBisect(rootFun fun, double* xStart, void* params, double* out, double epsRel, double epsAbs);
 
 #endif

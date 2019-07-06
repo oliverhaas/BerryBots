@@ -26,10 +26,11 @@ Rectangle::Rectangle(int left, int bottom, int width, int height) {
   bottom_ = bottom;
   width_ = width;
   height_ = height;
-  lines_[0] = new Line2D(left, bottom, left + width, bottom);
-  lines_[1] = new Line2D(left + width, bottom, left + width, bottom + height);
-  lines_[2] = new Line2D(left + width, bottom + height, left, bottom + height);
-  lines_[3] = new Line2D(left, bottom + height, left, bottom);
+  // Changed such that normal vector points away from wall and not inside wall
+  lines_[0] = new Line2D(left, bottom, left, bottom + height);
+  lines_[1] = new Line2D(left, bottom + height, left + width, bottom + height);
+  lines_[2] = new Line2D(left + width, bottom + height, left + width, bottom);
+  lines_[3] = new Line2D(left + width, bottom, left, bottom);
 }
 
 int Rectangle::getLeft() {

@@ -36,7 +36,26 @@ Circle2D::Circle2D(double x, double y, double r) {
 }
 
 bool Circle2D::intersects(Line2D *line) {
-  return intersects(line, false, false, (Point2D**) 0, (Point2D**) 0);
+  if (h_ - line->xMax() > r_ || line->xMin() - h_ > r_ || 
+      k_ - line->yMax() > r_ || line->yMin() - k_ > r_) {
+    return false;
+  }
+
+  if (contains(line->x1(), line->y1())) {
+    return true;
+  } else if (contains(line->x2(), line->y2())) {
+    return true;
+  }
+  
+  double dist = line->signedDistance(h_, k_);
+  double xc = h_ - dist*line->nx();
+  double yc = k_ - dist*line->ny();
+  if (xc > line->xMax() || line->xMin() > xc || 
+      yc > line->yMax() || line->yMin() > yc) {
+    return false;
+  } else {
+    return true;
+  }
 }
 
 bool Circle2D::intersects(Line2D *line, Point2D **p1, Point2D **p2) {
@@ -147,6 +166,12 @@ double Circle2D::r() {
   return r_;
 }
 
+//double Circle2D::distance(Circle2D *circle) {
+//  double xDiff = circle->h() - h_;
+//  double yDiff = circle->k() - k_;
+//  return (xDiff * xDiff) + (yDiff * yDiff);
+//}
+
 Circle2D* Circle2D::getInverse() {
   if (inverse_ == 0) {
     inverse_ = new Circle2D(k_, h_, r_);
@@ -165,14 +190,15 @@ void Circle2D::setPosition(double x, double y) {
 
 void Circle2D::saveToNextPoint(
     Point2D **p1, Point2D **p2, double x, double y, bool inverted) {
-  Point2D *newPoint = (inverted ? new Point2D(y, x) : new Point2D(x, y));
+//  Point2D *newPoint = (inverted ? new Point2D(y, x) : new Point2D(x, y));
   if (*p1 == 0) {
-    *p1 = newPoint;
+    *p1 = (inverted ? new Point2D(y, x) : new Point2D(x, y));
   } else if (*p2 == 0) {
-    *p2 = newPoint;
-  } else {
-    delete newPoint;
+    *p2 = (inverted ? new Point2D(y, x) : new Point2D(x, y));;
   }
+//  } else {
+//    delete newPoint;
+//  }
 }
 
 Circle2D::~Circle2D() {

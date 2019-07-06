@@ -47,9 +47,25 @@ Line2D::Line2D(double x1, double y1, double x2, double y2) {
   theta_ = std::numeric_limits<double>::quiet_NaN();
   inverse_ = 0;
   
-  nx_ = 0;
-  ny_ = 0;
-  defaultEps_ = 1.e-12;
+  // Hesse normal form
+  nx_ = -(y2 - y1);
+  ny_ = x2 - x1;
+  double norm = 1./sqrt(nx_*nx_ + ny_*ny_);
+  nx_ *= norm;
+  ny_ *= norm;
+  pp_ = nx_*x1 + ny_*y1;
+}
+
+double Line2D::nx() {
+  return nx_;
+}
+
+double Line2D::ny() {
+  return ny_;
+}
+
+double Line2D::pp() {
+  return pp_;
 }
 
 double Line2D::m() {
@@ -114,19 +130,16 @@ void Line2D::shift(double dx, double dy) {
 }
 
 double Line2D::distance(double xx, double yy) {
-  double aa = y2_ - y1_;
-  double bb = x2_ - x1_;
-  double cc = x2_*y1_ - y2_*x1_;
-  return abs(aa*xx-bb*yy+cc)/sqrt(aa*aa+bb*bb);
+  return abs(nx_*xx + ny_*yy - pp_);
 }
 
-double Line2D::distance(Point2D *point) {
-  return distance(point->getX(), point->getY());
+double Line2D::signedDistance(double xx, double yy) {
+  return nx_*xx + ny_*yy - pp_;
 }
 
 bool Line2D::contains(double xx, double yy, double eps) {
-  if (xx >= xMin_ - eps && xx <= xMax_ + eps && 
-      yy >= yMin_ - eps && yy <= yMax_ + eps && 
+  if (xx >= xMin_*(1.-eps) - eps && xx <= xMax_*(1.+eps) + eps &&
+      yy >= yMin_*(1.-eps) - eps && yy <= yMax_*(1.+eps) + eps &&
       distance(xx,yy) < eps) {
     return true;
   } 
@@ -134,16 +147,8 @@ bool Line2D::contains(double xx, double yy, double eps) {
 }
 
 bool Line2D::contains(double xx, double yy) {
-  return contains(xx, yy, defaultEps_);
+  return contains(xx, yy, DEFAULT_EPS);
 }
-
-//bool Line2D::contains(Point2D *point, double eps) {
-//  return contains(point->getX(), point->getY(), eps);
-//}
-
-//bool Line2D::contains(Point2D *point) {
-//  return contains(point->getX(), point->getY(), defaultEps_);
-//}
 
 Line2D* Line2D::getInverse() {
   if (inverse_ == 0) {

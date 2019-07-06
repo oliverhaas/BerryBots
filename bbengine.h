@@ -103,6 +103,9 @@ class BerryBotsEngine {
   bool stageConfigureComplete_;
   bool shipInitComplete_;
   bool battleMode_;
+  bool relativistic_; // Whether kinematics should be relativistic or not
+  bool wallCollDamage_; // Whether ship take damage when colliding with walls
+  bool shipShipCollDamage_; // Whether ship take damage when colliding with other ship
   bool roundOver_;
   bool gameOver_;
   bool physicsOver_;
@@ -124,6 +127,12 @@ class BerryBotsEngine {
     bool isShipInitComplete();
     void setBattleMode(bool battleMode);
     bool isBattleMode();
+    void setRelativistic(bool relativistic);
+    bool isRelativistic();
+    void setWallCollDamage(bool wallCollDamage);
+    bool isWallCollDamage();
+    void setShipShipCollDamage(bool shipShipCollDamage);
+    bool isShipShipCollDamage();
     void nextRound();
     void setRoundOver(bool roundOver);
     bool isRoundOver();
