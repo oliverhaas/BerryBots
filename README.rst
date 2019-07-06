@@ -41,7 +41,7 @@ As of now it's a work-in-progress, but they are mainly:
   than introducing unintuitive discretization errors (e.g. in collisions). Sensors, interaction
   with user code, etc. will still stay discretized as in original berrybots. For both non-relativistic and relativistic kinematics (see below)
   the integration/time stepping is exact to up to machine precision, since we only have piecewise constant
-  accelerations (except for collisions and torpedos of course). I rewrote a little bit more stuff than necessary,
+  force (except for collisions and torpedos of course, but those are treated in an "impulse approximation" as before, but now at the exactly right time). I rewrote a little bit more stuff than necessary,
   but the plus side it's both more accurate and faster than the original berrybots calculations.
 - DONE: Include collision damage for both ship-wall and ship-ship collisions. It's switchable from stage 
   (setWallCollDamage() and setShipShipCollDamage()). Wall collision damage is especially useful, since it
