@@ -38,9 +38,9 @@ added and changed mainly some game physics, which in my opinion improve the expe
 As of now it's a work-in-progress, but they are mainly:
 
 - DONE: Improve time stepping of movements so they approximate more closely continuous time physics rather
-  than introducing unintuitive discretization errors (e.g. in collisions). Sensors, interaction
-  with user code, etc. will still stay discretized as in original berrybots. For both non-relativistic and relativistic kinematics (see below)
-  the integration/time stepping is exact to up to machine precision, since we only have piecewise constant
+  than introducing unintuitive discretization errors like the original berrybots does (e.g. in collisions it's difficult to tell how exactly and when exactly a wall collision was applied; this can lead up to errors in position of several ship sizes, so it's difficult for a user to predict ship movement after a collision). Sensors, interaction
+  with user code, etc. will still stay discretized/can be done once per integer time as in original berrybots, obviously. For both non-relativistic and relativistic kinematics (see below)
+  the integration/time stepping is exact to up to machine precision if desired (but I chose a more reasonable error of course), since we only have piecewise constant
   force (except for collisions and torpedos of course, but those are treated in an "impulse approximation" as before, but now at the exactly right time). I rewrote a little bit more stuff than necessary,
   but the plus side it's both more accurate and faster than the original berrybots calculations.
 - DONE: Include collision damage for both ship-wall and ship-ship collisions. It's switchable from stage 
