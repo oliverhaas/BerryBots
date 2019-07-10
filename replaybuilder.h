@@ -180,9 +180,9 @@ class ReplayEventHandler : public EventHandler {
 
     virtual void handleShipHitShip(Ship *hittingShip, Ship *targetShip,
         double inAngle, double inForce, double outAngle, double outForce,
-        int time) {};
+        double damage, int time) {};
     virtual void handleShipHitWall(Ship *hittingShip, double bounceAngle,
-        double bounceForce, int time) {};
+        double bounceForce, double hitDamage, int time) {};
     virtual void tooManyUserGfxRectangles(Team *team) {};
     virtual void tooManyUserGfxLines(Team *team) {};
     virtual void tooManyUserGfxCircles(Team *team) {};

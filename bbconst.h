@@ -39,11 +39,11 @@
 #define STAGE_MARGIN          25
 #define SHIP_RADIUS           8
 #define SHIP_SIZE             SHIP_RADIUS * 2
-#define LASER_SPEED           30  // Doesn't has to be same as SPEED_OF_LIGHT, but makes sense obviously
+#define LASER_SPEED           25  // Doesn't has to be same as SPEED_OF_LIGHT, but has some logic to it
 #define LASER_HEAT            5
 #define LASER_DAMAGE          4
 #define TORPEDO_SPEED         12
-#define TORPEDO_HEAT          100
+#define TORPEDO_HEAT          40
 #define TORPEDO_BLAST_RADIUS  100
 #define TORPEDO_BLAST_FORCE   30
 #define TORPEDO_BLAST_DAMAGE  30
@@ -66,12 +66,22 @@
 #define CPU_TIME_TICKS        1000
 #define MAX_SCORE_STATS       1000
 
-// @ohaas: Some new constants for new physics.
+// @ohaas: Some new constants; for new physics mainly.
 #define SHIP_SHIP_BOUNCE      0.5
 #define WALL_DMG_SCALE        0.02
 #define SHIPSHIP_DMG_SCALE    0.02
-#define SPEED_OF_LIGHT        30      // When relativistic kinematics, this is max speed of ships
+#define SPEED_OF_LIGHT        50.      // When relativistic kinematics, this is max speed of ships
 #define DEFAULT_EPS           1.e-6   
+#define TORPEDO_AMMO          10
+#define TORPEDO_POWER_USAGE   10.
+#define LASER_POWER_USAGE     20.
+#define THRUSTER_POWER_USAGE  5.
+#define MAX_WALLCOLLS         1024
+#define POWER_REGEN           10.
+#define DEFAULT_POWER         100.
+#define SHIELDS_SCALE         0.1
+#define SHIELDS_DECAY         0.6
+#define MAX_SHIPSHIPCOLLS     1024
 
 #if defined(_WIN32)
 #define BB_DIRSEP      "\\"

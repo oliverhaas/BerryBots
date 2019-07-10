@@ -20,6 +20,8 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <iostream>
+#include <cstdio>
 #include "gfxeventhandler.h"
 
 GfxEventHandler::GfxEventHandler() {
@@ -27,6 +29,8 @@ GfxEventHandler::GfxEventHandler() {
   numTorpedoHits_ = 0;
   numShipDeaths_ = 0;
   numTorpedoBlasts_ = 0;
+  numWallColls_ = 0;
+  numShipShipColls_ = 0;
 }
 
 void GfxEventHandler::handleLaserHitShip(Ship *srcShip, Ship *targetShip,
@@ -77,6 +81,45 @@ void GfxEventHandler::handleTorpedoHitShip(Ship *srcShip, Ship *targetShip,
     }
     hitGraphic->numTorpedoSparks = numSparks;
     torpedoHits_[numTorpedoHits_++] = hitGraphic;
+  }
+}
+
+void GfxEventHandler::handleShipHitWall(Ship *hittingShip,
+  double bounceAngle, double bounceForce, double hitDamage, int time) {
+  if (numWallColls_ < MAX_WALLCOLLS && hitDamage > 0.) {
+    ShipHitWallGraphic *hitGraphic = new ShipHitWallGraphic;
+    hitGraphic->shipIndex = hittingShip->index;
+    hitGraphic->time = time;
+    hitGraphic->x = hittingShip->x - cos(bounceAngle)*SHIP_RADIUS;
+    hitGraphic->y = hittingShip->y - sin(bounceAngle)*SHIP_RADIUS;
+    short numSparks =
+        std::min(MAX_WALLCOLL_SPARKS, (int) ceil(2 + hitDamage/20.*MAX_WALLCOLL_SPARKS));
+    for (int ii = 0; ii < numSparks; ii++) {
+      hitGraphic->offsets[ii] = (-bounceAngle-0.5*M_PI)*180/M_PI + 20 + (rand() % 140);
+      hitGraphic->speeds[ii] = (1 + (rand() % 1))*(-bounceForce);
+    }
+    hitGraphic->numWallCollSparks = numSparks;
+    wallColls_[numWallColls_++] = hitGraphic;
+  }
+}
+
+void GfxEventHandler::handleShipHitShip(Ship *hittingShip, Ship *targetShip,
+    double inAngle, double inForce, double outAngle, double outForce,
+    double damage, int time) {
+  if (numShipShipColls_ < MAX_SHIPSHIPCOLLS && damage > 0.) {
+    ShipHitShipGraphic *hitGraphic = new ShipHitShipGraphic;
+    hitGraphic->shipIndex = hittingShip->index;
+    hitGraphic->time = time;
+    hitGraphic->x = hittingShip->x + cos(inAngle)*SHIP_RADIUS;
+    hitGraphic->y = hittingShip->y + sin(inAngle)*SHIP_RADIUS;
+    short numSparks =
+        std::min(MAX_SHIPSHIPCOLL_SPARKS, (int) ceil(2 + damage/20.*MAX_SHIPSHIPCOLL_SPARKS));
+    for (int ii = 0; ii < numSparks; ii++) {
+      hitGraphic->offsets[ii] = (-inAngle+0.5*M_PI)*180/M_PI + 20 + (rand() % 140);
+      hitGraphic->speeds[ii] = (1 + (rand() % 1))*outForce;
+    }
+    hitGraphic->numShipShipCollSparks = numSparks;
+    shipShipColls_[numShipShipColls_++] = hitGraphic;
   }
 }
 
@@ -136,6 +179,50 @@ void GfxEventHandler::removeTorpedoHits(int time) {
   }
 }
 
+ShipHitWallGraphic** GfxEventHandler::getWallColls() {
+  return wallColls_;
+}
+
+int GfxEventHandler::getWallCollsCount() {
+  return numWallColls_;
+}
+
+void GfxEventHandler::removeWallColls(int time) {
+  for (int ii = 0; ii < numWallColls_; ii++) {
+    ShipHitWallGraphic *wallColl = wallColls_[ii];
+    if (wallColl->time <= time) {
+      if (numWallColls_ > 1) {
+        wallColls_[ii] = wallColls_[numWallColls_ - 1];
+      }
+      ii--;
+      numWallColls_--;
+      delete wallColl;
+    }
+  }
+}
+
+ShipHitShipGraphic** GfxEventHandler::getShipShipColls() {
+  return shipShipColls_;
+}
+
+int GfxEventHandler::getShipShipCollsCount() {
+  return numShipShipColls_;
+}
+
+void GfxEventHandler::removeShipShipColls(int time) {
+  for (int ii = 0; ii < numShipShipColls_; ii++) {
+    ShipHitShipGraphic *shipShipColl = shipShipColls_[ii];
+    if (shipShipColl->time <= time) {
+      if (numShipShipColls_ > 1) {
+        shipShipColls_[ii] = shipShipColls_[numShipShipColls_ - 1];
+      }
+      ii--;
+      numShipShipColls_--;
+      delete shipShipColl;
+    }
+  }
+}
+
 ShipDeathGraphic** GfxEventHandler::getShipDeaths() {
   return shipDeaths_;
 }
@@ -189,5 +276,11 @@ GfxEventHandler::~GfxEventHandler() {
   }
   for (int x = 0; x < numTorpedoBlasts_; x++) {
     delete torpedoBlasts_[x];
+  }
+  for (int x = 0; x < numWallColls_; x++) {
+    delete wallColls_[x];
+  }
+  for (int x = 0; x < numShipShipColls_; x++) {
+    delete shipShipColls_[x];
   }
 }

@@ -24,9 +24,11 @@
 #include "bbutil.h"
 #include "eventhandler.h"
 
-#define MAX_SHIP_DEATHS     256
-#define NUM_LASER_SPARKS    4
-#define MAX_TORPEDO_SPARKS  30
+#define MAX_SHIP_DEATHS           256
+#define NUM_LASER_SPARKS          4
+#define MAX_TORPEDO_SPARKS        30
+#define MAX_WALLCOLL_SPARKS       8
+#define MAX_SHIPSHIPCOLL_SPARKS   8
 
 typedef struct {
   short shipIndex;
@@ -65,6 +67,28 @@ typedef struct {
   short speeds[MAX_TORPEDO_SPARKS];
 } TorpedoHitShipGraphic;
 
+typedef struct {
+  short shipIndex;
+  short wallIndex;
+  int time;
+  double x;
+  double y;
+  short numWallCollSparks;
+  short offsets[MAX_WALLCOLL_SPARKS];
+  short speeds[MAX_WALLCOLL_SPARKS];
+} ShipHitWallGraphic;
+
+typedef struct {
+  short shipIndex;
+  short shipIndex2;
+  int time;
+  double x;
+  double y;
+  short numShipShipCollSparks;
+  short offsets[MAX_SHIPSHIPCOLL_SPARKS];
+  short speeds[MAX_SHIPSHIPCOLL_SPARKS];
+} ShipHitShipGraphic;
+
 class GfxEventHandler : public EventHandler {
   LaserHitShipGraphic* laserHits_[MAX_LASERS];
   int numLaserHits_;
@@ -75,6 +99,11 @@ class GfxEventHandler : public EventHandler {
   TorpedoBlastGraphic* torpedoBlasts_[MAX_TORPEDOS];
   int numTorpedoBlasts_;
 
+  ShipHitWallGraphic* wallColls_[MAX_WALLCOLLS];
+  int numWallColls_;
+  ShipHitShipGraphic* shipShipColls_[MAX_SHIPSHIPCOLLS];
+  int numShipShipColls_;
+  
   public:
     GfxEventHandler();
     ~GfxEventHandler();
@@ -86,9 +115,9 @@ class GfxEventHandler : public EventHandler {
         double hitDamage, int time);
     virtual void handleShipHitShip(Ship *hittingShip, Ship *targetShip,
         double inAngle, double inForce, double outAngle, double outForce,
-        int time) {};
+        double damage, int time);
     virtual void handleShipHitWall(
-        Ship *hittingShip, double bounceAngle, double bounceForce, int time) {};
+        Ship *hittingShip, double bounceAngle, double bounceForce, double hitDamage, int time);
     virtual void handleShipDestroyed(Ship *destroyedShip, int time,
         Ship **destroyerShips, int numDestroyers);
     virtual void handleShipFiredLaser(Ship *firingShip, Laser *laser) {};
@@ -113,6 +142,14 @@ class GfxEventHandler : public EventHandler {
     TorpedoBlastGraphic** getTorpedoBlasts();
     int getTorpedoBlastCount();
     void removeTorpedoBlasts(int time);
+
+    ShipHitWallGraphic** getWallColls();
+    int getWallCollsCount();
+    void removeWallColls(int time);
+
+    ShipHitShipGraphic** getShipShipColls();
+    int getShipShipCollsCount();
+    void removeShipShipColls(int time);
 };
 
 #endif

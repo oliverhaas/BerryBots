@@ -161,7 +161,7 @@ void SensorHandler::handleTorpedoHitShip(Ship *srcShip, Ship *targetShip,
 
 void SensorHandler::handleShipHitShip(Ship *hittingShip, Ship *targetShip,
     double inAngle, double inForce, double outAngle, double outForce,
-    int time) {
+    double damage, int time) {
   int teamIndex = targetShip->teamIndex;
   if (numHitByShips_[teamIndex] < MAX_HIT_BY_SHIPS) {
     HitByShip *hitByShip = new HitByShip;
@@ -176,6 +176,7 @@ void SensorHandler::handleShipHitShip(Ship *hittingShip, Ship *targetShip,
     hitByShip->inForce = inForce;
     hitByShip->outAngle = outAngle;
     hitByShip->outForce = outForce;
+    hitByShip->damage = damage;
     hitByShips_[teamIndex][numHitByShips_[teamIndex]++] = hitByShip;
   }
 
@@ -197,7 +198,7 @@ void SensorHandler::handleShipHitShip(Ship *hittingShip, Ship *targetShip,
 }
 
 void SensorHandler::handleShipHitWall(
-    Ship *hittingShip, double bounceAngle, double bounceForce, int time) {
+    Ship *hittingShip, double bounceAngle, double bounceForce, double hitDamage, int time) {
   int teamIndex = hittingShip->teamIndex;
   if (numHitWalls_[teamIndex] < MAX_HIT_WALLS) {
     ShipHitWall *hitWall = new ShipHitWall;

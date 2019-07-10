@@ -200,6 +200,9 @@ typedef struct {
   short thrusterR;
   short thrusterG;
   short thrusterB;
+  short shieldsR;
+  short shieldsG;
+  short shieldsB;
   bool stageShip;
   bool disabled;
   bool ownedByLua;
@@ -217,6 +220,9 @@ typedef struct {
   double speed;
   double momentum;
   double energy;
+  double power;
+  double shields;
+  short torpedoAmmo;
   short laserGunHeat;
   short torpedoGunHeat;
   bool hitWall;
@@ -226,12 +232,15 @@ typedef struct {
   bool torpedoEnabled;
   bool thrusterEnabled;
   bool energyEnabled;
+  bool powerEnabled;
+  bool shieldsEnabled;
   bool showName;
   bool newColors;
   double kills;
   double friendlyKills;
   double damage;
   double friendlyDamage;
+  double shieldedDamage;
   ShipProperties *properties;
 } Ship;
 

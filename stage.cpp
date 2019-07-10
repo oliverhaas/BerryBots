@@ -762,7 +762,10 @@ double Stage::timeToFirstShipWallCollision(
           wers.yp = wall->y1();
           double tColl;
           double tStart[2] = {0., *timeToFirstEvent};
-          newtonBisect(wallEndpointRootFun, tStart, &wers, &tColl, DEFAULT_EPS, DEFAULT_EPS);
+          int ret = newtonBisect(wallEndpointRootFun, tStart, &wers, &tColl, DEFAULT_EPS, DEFAULT_EPS);
+          if (ret != 1) {
+            std::cout << "wall endpoint 1 debug: " << ret << " " << tColl << "\n";
+          }
           if (tColl < (*timeToFirstEvent)) {
             *timeToFirstEvent = tColl;
             *typeFirstEvent = 3;
@@ -779,7 +782,10 @@ double Stage::timeToFirstShipWallCollision(
           wers.yp = wall->y2();
           double tColl;
           double tStart[2] = {0., *timeToFirstEvent};
-          newtonBisect(wallEndpointRootFun, tStart, &wers, &tColl, DEFAULT_EPS, DEFAULT_EPS);           
+          int ret = newtonBisect(wallEndpointRootFun, tStart, &wers, &tColl, DEFAULT_EPS, DEFAULT_EPS);
+          if (ret != 1) {
+            std::cout << "wall endpoint 2 debug: " << ret << " " << tColl << "\n";
+          }
           if (tColl < (*timeToFirstEvent)) {
             *timeToFirstEvent = tColl;
             *typeFirstEvent = 3;
@@ -799,7 +805,10 @@ double Stage::timeToFirstShipWallCollision(
           wrs.wall = wall;
           double tColl;
           double tStart[2] = {0., *timeToFirstEvent};          
-          newtonBisect(wallRootFun, tStart, &wrs, &tColl, DEFAULT_EPS, DEFAULT_EPS);
+          int ret = newtonBisect(wallRootFun, tStart, &wrs, &tColl, DEFAULT_EPS, DEFAULT_EPS);
+          if (ret != 1) {
+            std::cout << "wall middle debug: " << ret << " " << tColl << "\n";
+          }
           if (tColl < (*timeToFirstEvent)) { 
             *timeToFirstEvent = tColl;
             *typeFirstEvent = 0;
@@ -839,7 +848,10 @@ double Stage::timeToFirstShipShipCollision(
             ssrs.smd = smd;
             ssrs.smd2 = smd2;
             ssrs.pushFun = pushFun_;  
-            newtonBisect(shipShipRootFun, tStart, &ssrs, &tColl, DEFAULT_EPS, DEFAULT_EPS);
+            int ret = newtonBisect(shipShipRootFun, tStart, &ssrs, &tColl, DEFAULT_EPS, DEFAULT_EPS);
+            if (ret != 1) {
+              std::cout << "ship-ship debug: " << ret << " " << tColl << "\n";
+            }
             if (tColl < (*timeToFirstEvent)) {
               *timeToFirstEvent = tColl;
               *typeFirstEvent = 1;
@@ -875,6 +887,14 @@ void Stage::moveAndCheckCollisions(
       smd->circ = new Circle2D(oldShip->x, oldShip->y, SHIP_RADIUS);
       smd->nextCirc = new Circle2D(0, 0, SHIP_RADIUS);
       
+      if (ship->powerEnabled) {
+        if (ship->power < ship->thrusterForce*THRUSTER_POWER_USAGE) {
+          ship->thrusterForce = ship->power/THRUSTER_POWER_USAGE*ship->thrusterForce;
+          ship->power = 0.;
+        } else {
+          ship->power -= ship->thrusterForce*THRUSTER_POWER_USAGE;
+        }
+      }
       smd->coords[0] = ship->x;
       smd->coords[1] = ship->y;
       smd->coords[4] = cos(ship->heading) * ship->momentum;
@@ -1122,34 +1142,19 @@ void Stage::checkLaserShipCollisions(Ship **ships, ShipMoveData *shipData,
           } else {
             ships[firingShipIndex]->damage += damageScore;
           }
-          ship->energy -= laserDamage;
+          
+          damageShip(ship, laserDamage);
           for (int kk = 0; kk < numEventHandlers_; kk++) {
             eventHandlers_[kk]->handleLaserHitShip(ships[laser->shipIndex],
                 ship, laser, smd->coords[2], smd->coords[3],
                 gameTime);
           }
 
-          if (ship->energy <= 0) {
-            ship->alive = false;
-          }
           laser->dead = true;
         }
       }
     }
   }
-}
-
-void Stage::nudgeShip(Ship *oldShip, Ship *ship, ShipMoveData *smd, double angle) {
-
-  // Add a little nudge so we're not inside the wall next time step.
-  double epsNudge = 1.e-12*(1. + sqrt(square(width_)+square(height_)));
-  smd->circ->setPosition(
-      smd->circ->h() + cos(angle)*epsNudge,
-      smd->circ->k() + sin(angle)*epsNudge); 
-  ship->x = smd->circ->h();
-  ship->y = smd->circ->k();
-        
-  return;
 }
 
 void Stage::doWallCollision(Ship *oldShip, Ship *ship, ShipMoveData *smd, Line2D *wall,
@@ -1164,9 +1169,6 @@ void Stage::doWallCollision(Ship *oldShip, Ship *ship, ShipMoveData *smd, Line2D
   momentumToVelocity_(smd->coords[4], smd->coords[5], &smd->coords[2], &smd->coords[3]);
   double angle = atan2(wall->ny(), wall->nx());
   double force = (1.+WALL_BOUNCE)*normFac;
-  for (int ii = 0; ii < numEventHandlers_; ii++) {
-    eventHandlers_[ii]->handleShipHitWall(ship, angle, force, gameTime);
-  }
 
   // Nudge ship away from collision
   double dist = wall->distance(smd->coords[0], smd->coords[1]) - SHIP_RADIUS;
@@ -1179,13 +1181,19 @@ void Stage::doWallCollision(Ship *oldShip, Ship *ship, ShipMoveData *smd, Line2D
   setShipData(oldShip, ship, smd);
   
   // Collision damage
+  double damage = std::numeric_limits<double>::quiet_NaN();
   if (wallCollDamage_) {
-    ship->energy += WALL_DMG_SCALE*(kineticEnergy_(smd->coords[4], smd->coords[5]) - energyInitial);;
+    damage = WALL_DMG_SCALE*(energyInitial - kineticEnergy_(smd->coords[4], smd->coords[5]));
+    ship->energy -= damage;
     if (ship->energy <= 0) {
       ship->alive = false;
     }
   }
   
+  for (int ii = 0; ii < numEventHandlers_; ii++) {
+    eventHandlers_[ii]->handleShipHitWall(ship, angle, force, damage, gameTime);
+  }
+
   return;
 }
 
@@ -1212,10 +1220,7 @@ void Stage::doWallEndpointCollision(Ship *oldShip, Ship *ship, ShipMoveData *smd
   momentumToVelocity_(smd->coords[4], smd->coords[5], &smd->coords[2], &smd->coords[3]);
   double angle = atan2(ny, nx);
   double force = (1.+WALL_BOUNCE)*normFac;
-  for (int ii = 0; ii < numEventHandlers_; ii++) {
-    eventHandlers_[ii]->handleShipHitWall(ship, angle, force, gameTime);
-  }
-  
+
   // Nudge ship away from collision
   double dist = 1./nmaginv - SHIP_RADIUS;
   if (dist <= DEFAULT_EPS) {
@@ -1227,11 +1232,14 @@ void Stage::doWallEndpointCollision(Ship *oldShip, Ship *ship, ShipMoveData *smd
   setShipData(oldShip, ship, smd);
 
   // Collision damage
+  double damage = std::numeric_limits<double>::quiet_NaN();
   if (wallCollDamage_) {
-    ship->energy += WALL_DMG_SCALE*(kineticEnergy_(smd->coords[4], smd->coords[5]) - energyInitial);;
-    if (ship->energy <= 0) {
-      ship->alive = false;
-    }
+    damage = WALL_DMG_SCALE*(energyInitial - kineticEnergy_(smd->coords[4], smd->coords[5]));
+    damageShip(ship, damage);
+  }
+  
+  for (int ii = 0; ii < numEventHandlers_; ii++) {
+    eventHandlers_[ii]->handleShipHitWall(ship, angle, force, damage, gameTime);
   }
   
   return;
@@ -1267,11 +1275,6 @@ void Stage::doShipShipCollision(Ship **oldShips, Ship **ships, ShipMoveData *shi
   smd2->coords[5] += yForce;
   momentumToVelocity_(smd2->coords[4], smd2->coords[5], &smd2->coords[2], &smd2->coords[3]);
 
-  for (int kk = 0; kk < numEventHandlers_; kk++) {
-    eventHandlers_[kk]->handleShipHitShip(ship, ship2, angle, force, angle2, force, gameTime);
-    eventHandlers_[kk]->handleShipHitShip(ship2, ship, angle2, force, angle, force, gameTime);
-  }
-
   // Nudge ship away from collision if necessary
   double dist = sqrt(square(smd->coords[0]-smd2->coords[0]) + 
     square(smd->coords[1]-smd2->coords[1])) - SHIP_SIZE;
@@ -1289,22 +1292,38 @@ void Stage::doShipShipCollision(Ship **oldShips, Ship **ships, ShipMoveData *shi
   setShipData(oldShips[indexShipShipFirstCollided2], ship2, smd2);
 
   // Collision damage
+  double damage = std::numeric_limits<double>::quiet_NaN();
   if (shipShipCollDamage_) {
     double energyFinal = kineticEnergy_(smd->coords[4], smd->coords[5]) +
         kineticEnergy_(smd2->coords[4], smd2->coords[5]);
-    ship->energy += SHIPSHIP_DMG_SCALE*(energyFinal-energyInitial);
-    ship2->energy += SHIPSHIP_DMG_SCALE*(energyFinal-energyInitial);
-    if (ship->energy <= 0) {
-      ship->alive = false;
-    }
-    if (ship2->energy <= 0) {
-      ship2->alive = false;
-    }
+    damage = SHIPSHIP_DMG_SCALE*(energyInitial-energyFinal);
+    damageShip(ship, damage);
+    damageShip(ship2, damage);
   }
   
+  for (int kk = 0; kk < numEventHandlers_; kk++) {
+    eventHandlers_[kk]->handleShipHitShip(ship, ship2, angle, force, angle2, force, damage, gameTime);
+    eventHandlers_[kk]->handleShipHitShip(ship2, ship, angle2, force, angle, force, damage, gameTime);
+  }
+
   return;
 }
 
+double Stage::damageShip(Ship *ship, double damage) {
+  
+  if (ship->shieldsEnabled) {
+    double dmgshd = damage*SHIELDS_SCALE*ship->shields/(1.+abs(SHIELDS_SCALE*ship->shields));
+    dmgshd = std::min(ship->shields, dmgshd);
+    ship->shields -= dmgshd;
+    damage -= dmgshd;
+    ship->shieldedDamage += dmgshd;
+  }
+  ship->energy -= damage;
+  if (ship->energy <= 0) {
+    ship->alive = false;
+  }
+}
+                    
 void Stage::timeToFirstTorpedoExplosion(
     double *timeToFirstEvent, int *torpedoIndex, int* typeFirstEvent) {
 
@@ -1362,15 +1381,12 @@ void Stage::explodeTorpedo(Ship **oldShips, Ship **ships, ShipMoveData *shipData
               blastAngle, blastForce, blastDamage, gameTime);
         }
 
-        ship->energy -= blastDamage;
         smd->coords[4] += cos(blastAngle) * blastForce;
         smd->coords[5] += sin(blastAngle) * blastForce;
         momentumToVelocity_(smd->coords[4], smd->coords[5], &smd->coords[2], &smd->coords[3]);
         setShipData(oldShips[ii], ship, smd);
         
-        if (ship->energy <= 0) {
-          ship->alive = false;
-        }
+        damageShip(ship, blastDamage);
       }
     }
   }
@@ -1457,7 +1473,8 @@ void Stage::updateShipPosition(Ship *ship, double x, double y) {
 // @ohaas: Changed laser line such that it's centered around firing origin.
 //         This makes lasers easier or more intuitive to hit for the user in my opinion.
 int Stage::fireLaser(Ship *ship, double heading, int gameTime) {
-  if (ship->laserGunHeat > 0 || numLasers_ >= MAX_LASERS) {
+  if (ship->laserGunHeat > 0 || numLasers_ >= MAX_LASERS ||
+      (ship->powerEnabled && ship->power < LASER_POWER_USAGE)) {
     return 0;
   } else {
     double cosHeading = cos(heading);
@@ -1468,6 +1485,9 @@ int Stage::fireLaser(Ship *ship, double heading, int gameTime) {
     double laserY = ship->y + dy*0.5;
     Line2D laserStartLine(ship->x+dx, ship->y+dy, laserX, laserY);
     if (hasVision(&laserStartLine)) {
+      if (ship->powerEnabled) {
+        ship->power -= LASER_POWER_USAGE;
+      }
       Laser *laser = new Laser;
       laser->id = nextLaserId_++;
       laser->shipIndex = ship->index;
@@ -1495,9 +1515,15 @@ int Stage::fireLaser(Ship *ship, double heading, int gameTime) {
 
 int Stage::fireTorpedo(
     Ship *ship, double heading, double distance, int gameTime) {
-  if (ship->torpedoGunHeat > 0 || numTorpedos_ >= MAX_TORPEDOS) {
+  if (ship->torpedoGunHeat > 0 || numTorpedos_ >= MAX_TORPEDOS || 
+      ship->torpedoAmmo <= 0 || 
+      (ship->powerEnabled && ship->power < TORPEDO_POWER_USAGE)) {
     return 0;
   } else {
+    ship->torpedoAmmo -= 1;
+    if (ship->powerEnabled) {
+      ship->power -= TORPEDO_POWER_USAGE;
+    }
     Torpedo *torpedo = new Torpedo;
     torpedo->id = nextTorpedoId_++;
     torpedo->shipIndex = ship->index;
@@ -1515,7 +1541,7 @@ int Stage::fireTorpedo(
 //    double flightTime = getPosMin(-torpedo->x/dx, (width_-torpedo->x)/dx, 
 //                                  -torpedo->y/dy, (height_-torpedo->y)/dy);
 //    torpedo->distance = fmin(TORPEDO_SPEED*flightTime, distance);
-    torpedo->distance = distance;
+    torpedo->distance = std::min(distance, 2.*std::max(width_, height_));
     torpedo->dx = dx;
     torpedo->dy = dy;
     torpedo->distanceTraveled = 0.;

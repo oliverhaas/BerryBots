@@ -65,6 +65,16 @@
 #define MAX_TEXT_FONT_SIZE        256
 #define FONT_NAME                 "resources/Questrial-Regular.ttf"
 
+// @ohaas: Some new animations for wall-ship and ship-ship collisions
+#define WALLCOLL_SPARK_RADIUS      1.2
+#define WALLCOLL_SPARK_FRAMES      10
+#define WALLCOLL_SPARK_TIME        WALLCOLL_SPARK_FRAMES
+#define SHIPSHIPCOLL_SPARK_RADIUS  1.2
+#define SHIPSHIPCOLL_SPARK_FRAMES  10
+#define SHIPSHIPCOLL_SPARK_TIME    SHIPSHIPCOLL_SPARK_FRAMES
+#define DRAW_SHIELDS_RADIUS        (SHIP_RADIUS + 3.0)
+#define SHIELDS_THICKNESS          1.0
+
 #define DOCK_ENERGY_LENGTH        (DOCK_SIZE - 40)
 #define DOCK_BUTTON_FONT_SIZE     20
 #define DOCK_SHORTCUT_FONT_SIZE   18
@@ -75,6 +85,7 @@
 #define ENERGY_COLOR              sf::Color(255, 255, 0, 255)
 #define ZONE_COLOR                sf::Color(100, 68, 68, 255)
 #define DOCK_LINE_COLOR           sf::Color(100, 100, 100)
+
 
 class GfxViewListener {
   public:
@@ -136,6 +147,12 @@ class GfxManager {
   sf::RectangleShape dockLineShape_;
   sf::RectangleShape dockMarginShape_;
 
+  sf::CircleShape wallCollSparkShape_;
+  sf::Vector2f wallCollSparkPoint_;
+  sf::CircleShape shipShipCollSparkShape_;
+  sf::Vector2f shipShipCollSparkPoint_;
+  sf::CircleShape shieldsShape_;
+  
   sf::RectangleShape **wallShapes_;
   int numWalls_;
   sf::RectangleShape **zoneShapes_;
@@ -147,6 +164,7 @@ class GfxManager {
   sf::Color* shipDeathColors_;
   sf::Color* laserColors_;
   sf::Color* thrusterColors_;
+  sf::Color* shieldsColors_;
 
   sf::View dockTopView_;
   sf::View dockTeamsView_;
@@ -201,6 +219,16 @@ class GfxManager {
     void drawTorpedos(sf::RenderWindow *window, Stage *stage);
     void drawTorpedoBlasts(sf::RenderWindow *window, int time,
                            GfxEventHandler *gfxHandler);
+                           
+    void adjustWallCollSparkPosition(sf::CircleShape *sparkShape,
+                                     double angle, int sparkTime, int sparkSpeed);
+    void drawWallCollSparks(sf::RenderWindow *window, int time,
+                            GfxEventHandler *gfxHandler, Ship **ships);
+    void adjustShipShipCollSparkPosition(sf::CircleShape *sparkShape,
+        double angle, int sparkTime, int sparkSpeed);
+    void drawShipShipCollSparks(sf::RenderWindow *window, int time,
+        GfxEventHandler *gfxHandler, Ship **ships);
+                                                         
     void adjustThrusterPosition(sf::RectangleShape *thrusterShape,
                                 double angle);
     void drawThrusters(sf::RenderWindow *window, Ship **ships, int numShips);

@@ -35,9 +35,9 @@ class EventHandler {
     // receiving momentum of outAngle / outForce
     virtual void handleShipHitShip(Ship *hittingShip, Ship *targetShip,
         double inAngle, double inForce, double outAngle, double outForce,
-        int time) = 0;
+        double damage, int time) = 0;
     virtual void handleShipHitWall(Ship *hittingShip, double bounceAngle,
-        double bounceForce, int time) = 0;
+        double bounceForce, double hitDamage, int time) = 0;
     virtual void handleShipDestroyed(Ship *destroyedShip, int time,
         Ship **destroyerShips, int numDestroyers) = 0;
     virtual void handleShipFiredLaser(Ship *firingShip, Laser *laser) = 0;

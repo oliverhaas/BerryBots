@@ -48,6 +48,7 @@ typedef struct {
   double inForce;
   double outAngle;
   double outForce;
+  double damage;
 } HitByShip;
 
 typedef struct {
@@ -113,6 +114,7 @@ typedef struct {
   double inForce;
   double outAngle;
   double outForce;
+  double damage;
 } ShipHitShip;
 
 typedef struct {
@@ -200,9 +202,9 @@ class SensorHandler : public EventHandler {
         double hitDamage, int time);
     virtual void handleShipHitShip(Ship *hittingShip, Ship *targetShip,
         double inAngle, double inForce, double outAngle, double outForce,
-        int time);
+        double damage, int time);
     virtual void handleShipHitWall(
-        Ship *hittingShip, double bounceAngle, double bounceForce, int time);
+        Ship *hittingShip, double bounceAngle, double bounceForce, double hitDamage, int time);
     virtual void handleShipDestroyed(Ship *destroyedShip, int time,
         Ship **destroyerShips, int numDestroyers);
     virtual void handleShipFiredLaser(Ship *firingShip, Laser *laser);

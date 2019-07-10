@@ -52,8 +52,8 @@ BerryBotsEngine::BerryBotsEngine(PrintHandler *printHandler,
   shipInitComplete_ = false;
   battleMode_ = false;
   relativistic_ = true;
-  wallCollDamage_ = true;
-  shipShipCollDamage_ = true;
+  wallCollDamage_ = false;      // These get set to true if battleMode is enabled and
+  shipShipCollDamage_ = false;  // have to be turned off "again" if desired.
   roundOver_ = false;
   gameOver_ = false;
   physicsOver_ = false;
@@ -233,6 +233,10 @@ bool BerryBotsEngine::isShipInitComplete() {
 
 void BerryBotsEngine::setBattleMode(bool battleMode) {
   battleMode_ = battleMode;
+  if (battleMode_) {
+    setWallCollDamage(true);
+    setShipShipCollDamage(true);
+  }
 }
 
 bool BerryBotsEngine::isBattleMode() {
@@ -792,14 +796,20 @@ void BerryBotsEngine::initShips(const char *shipsBaseDir, char **teamNames,
       ship->torpedoEnabled = battleMode_;
       ship->thrusterEnabled = true;
       ship->energyEnabled = battleMode_;
+      ship->powerEnabled = battleMode_;
+      ship->shieldsEnabled = battleMode_;
       ship->showName = true;
       ship->kills = ship->damage = 0;
       ship->friendlyKills = ship->friendlyDamage = 0;
+      ship->shieldedDamage = 0;
       ship->newColors = true;
       properties->stageShip = stageShip;
       properties->shipR = properties->shipG = properties->shipB = 255;
       properties->laserR = properties->laserB = 0;
       properties->laserG = 255;
+      properties->shieldsR = 100;
+      properties->shieldsB = 255;
+      properties->shieldsG = 200;      
       properties->thrusterG = properties->thrusterB = 0;
       properties->thrusterR = 255;
       properties->engine = this;
@@ -909,9 +919,12 @@ void BerryBotsEngine::initShipRound(Ship *ship) {
   ship->speed = ship->momentum = ship->heading = 
     ship->thrusterAngle = ship->thrusterForce = 0;
   ship->energy = DEFAULT_ENERGY;
+  ship->torpedoAmmo = TORPEDO_AMMO;
   ship->laserGunHeat = LASER_HEAT;
   ship->torpedoGunHeat = TORPEDO_HEAT;
   ship->hitWall = ship->hitShip = false;
+  ship->power = DEFAULT_POWER;
+  ship->shields = 0;
 
   bool safeStart;
   do {
@@ -976,6 +989,8 @@ void BerryBotsEngine::processTick() throw (EngineException*) {
         ship->thrusterForce = 0;
         ship->laserGunHeat = std::max(0, ship->laserGunHeat - 1);
         ship->torpedoGunHeat = std::max(0, ship->torpedoGunHeat - 1);
+        ship->power = std::min(DEFAULT_POWER, ship->power+POWER_REGEN);
+        ship->shields *= SHIELDS_DECAY;
       }
 
       lua_getglobal(team->state, "run");

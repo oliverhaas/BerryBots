@@ -222,7 +222,6 @@ class Stage {
     void timeToFirstTorpedoExplosion(
         double *timeToFirstEvent, int *torpedoIndex, int* typeFirstEvent);
     
-    void nudgeShip(Ship *oldShip, Ship *ship, ShipMoveData *shipDatum, double angle);
     void doWallCollision(Ship *oldShip, Ship *ship, ShipMoveData *shipDatum, Line2D *wall,
                          int gameTime);
     void doWallEndpointCollision(Ship *oldShip, Ship *ship, ShipMoveData *shipDatum, Line2D *wall,
@@ -236,7 +235,7 @@ class Stage {
     void pushTorpedos(double dt);
     void explodeTorpedo(Ship **oldShips, Ship **ships, ShipMoveData *shipData, int numShips,
                         int torpedoIndex, bool **torpedoHits, int gameTime);
-                        
+    double damageShip(Ship *ship, double damage); // Returns damage actually taken
     
     
     

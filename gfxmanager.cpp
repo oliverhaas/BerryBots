@@ -72,8 +72,14 @@ GfxManager::GfxManager(std::string resourcePath, bool showDock) {
   laserShape_.setOutlineThickness(0);
   laserPoint_ = sf::Vector2f(0, LASER_THICKNESS / 2);
 
+  shieldsShape_.setRadius(DRAW_SHIELDS_RADIUS);
+  shieldsShape_.setOutlineThickness(SHIELDS_THICKNESS);
+  shieldsShape_.setFillColor(sf::Color::Transparent);
+  
   torpedoSparkShape_.setRadius(TORPEDO_SPARK_RADIUS);
-  torpedoSparkPoint_ = sf::Vector2f(DRAW_SHIP_RADIUS, -TORPEDO_SPARK_RADIUS);
+  torpedoSparkPoint_ = sf::Vector2f(DRAW_SHIP_RADIUS - TORPEDO_SPARK_RADIUS, 0);
+  // @ohaas: above line changed from the following; I think it was a typo
+//  torpedoSparkPoint_ = sf::Vector2f(DRAW_SHIP_RADIUS, -TORPEDO_SPARK_RADIUS);
   torpedoCircleShape_.setRadius(TORPEDO_RADIUS);
   torpedoCircleShape_.setOutlineColor(TORPEDO_COLOR);
   torpedoCircleShape_.setFillColor(TORPEDO_COLOR);
@@ -87,6 +93,11 @@ GfxManager::GfxManager(std::string resourcePath, bool showDock) {
   torpedoBlastShape_.setOutlineThickness(2.5);
   torpedoBlastShape_.setFillColor(sf::Color::Transparent);
 
+  wallCollSparkShape_.setRadius(WALLCOLL_SPARK_RADIUS);
+  wallCollSparkPoint_ = sf::Vector2f(DRAW_SHIP_RADIUS, 0);
+  shipShipCollSparkShape_.setRadius(SHIPSHIPCOLL_SPARK_RADIUS);
+  shipShipCollSparkPoint_ = sf::Vector2f(DRAW_SHIP_RADIUS, 0);
+  
   thrusterShape_.setSize(
       sf::Vector2f(DRAW_SHIP_RADIUS + THRUSTER_LENGTH, THRUSTER_THICKNESS));
   thrusterShape_.setOutlineThickness(0);
@@ -138,6 +149,7 @@ void GfxManager::initBbGfx(sf::RenderWindow *window, double backingScale,
   shipColors_ = new sf::Color[numShips];
   shipDeathColors_ = new sf::Color[numShips];
   laserColors_ = new sf::Color[numShips];
+  shieldsColors_ = new sf::Color[numShips];
   thrusterColors_ = new sf::Color[numShips];
   shipDotOffsets_ = new int[numShips];
   shipDotDirections_ = new bool[numShips];
@@ -188,6 +200,9 @@ void GfxManager::copyShipColors(int shipIndex) {
   laserColors_[shipIndex].r = ship->properties->laserR;
   laserColors_[shipIndex].g = ship->properties->laserG;
   laserColors_[shipIndex].b = ship->properties->laserB;
+  shieldsColors_[shipIndex].r = ship->properties->shieldsR;
+  shieldsColors_[shipIndex].g = ship->properties->shieldsG;
+  shieldsColors_[shipIndex].b = ship->properties->shieldsB;
   thrusterColors_[shipIndex].r = ship->properties->thrusterR;
   thrusterColors_[shipIndex].g = ship->properties->thrusterG;
   thrusterColors_[shipIndex].b = ship->properties->thrusterB;
@@ -327,6 +342,7 @@ void GfxManager::destroyBbGfx() {
     delete shipColors_;
     delete shipDeathColors_;
     delete laserColors_;
+    delete shieldsColors_;
     delete thrusterColors_;
     delete shipDotOffsets_;
     delete shipDotDirections_;
@@ -395,6 +411,8 @@ void GfxManager::drawGame(sf::RenderWindow *window, Stage *stage, Ship **ships,
   gfxHandler->removeLaserHits(time - LASER_SPARK_TIME);
   gfxHandler->removeTorpedoHits(time - TORPEDO_SPARK_TIME);
   gfxHandler->removeTorpedoBlasts(time - TORPEDO_BLAST_TIME);
+  gfxHandler->removeWallColls(time - WALLCOLL_SPARK_TIME);
+  gfxHandler->removeShipShipColls(time - SHIPSHIPCOLL_SPARK_TIME);
 
   updateShipColors();
   drawZones(window);
@@ -404,6 +422,8 @@ void GfxManager::drawGame(sf::RenderWindow *window, Stage *stage, Ship **ships,
   drawShipDeaths(window, time, gfxHandler);
   drawLaserSparks(window, time, gfxHandler, ships);
   drawTorpedoSparks(window, time, gfxHandler, ships);
+  drawWallCollSparks(window, time, gfxHandler, ships);
+  drawShipShipCollSparks(window, time, gfxHandler, ships);
   drawThrusters(window, ships, numShips);
   drawNames(window, ships, numShips);
   drawLasers(window, stage);
@@ -768,6 +788,19 @@ void GfxManager::drawShips(sf::RenderWindow *window, Ship **ships, int numShips,
                              adjustY(ship->y - DRAW_SHIP_RADIUS, DRAW_SHIP_RADIUS * 2));
       window->draw(shipShape_);
 
+      // @ohaas: Draw shields if enabled.
+      if (ship->shieldsEnabled) {
+        if (ship->shields < 0.1) {
+          shieldsColors_[x].a = 0.;
+        } else {
+          shieldsColors_[x].a = (std::min(ship->shields/15., 0.1)+0.9)*255;
+        }
+        shieldsShape_.setOutlineColor(shieldsColors_[x]);
+        shieldsShape_.setPosition(adjustX(ship->x - DRAW_SHIELDS_RADIUS),
+                                  adjustY(ship->y - DRAW_SHIELDS_RADIUS, DRAW_SHIELDS_RADIUS * 2));
+        window->draw(shieldsShape_);
+      }
+      
       shipDotShape_.setFillColor(laserColors_[x]);
       for (int y = 0; y < 3; y++) {
         shipDotShape_.setPosition(adjustX(ship->x - SHIP_DOT_RADIUS),
@@ -871,6 +904,66 @@ void GfxManager::drawTorpedoSparks(sf::RenderWindow *window, int time,
       adjustTorpedoSparkPosition(&torpedoSparkShape_, torpedoHit->offsets[x],
                                  sparkTime, torpedoHit->speeds[x]);
       window->draw(torpedoSparkShape_);
+    }
+  }
+}
+
+void GfxManager::adjustWallCollSparkPosition(sf::CircleShape *sparkShape,
+    double angle, int sparkTime, int sparkSpeed) {
+  sf::Transform transform;
+  transform.rotate(angle);
+  double scale = 2*((((double) sparkTime) / 3) * sparkSpeed / 100);
+  transform.scale(scale, scale);
+  sf::Vector2f sparkOffset = transform.transformPoint(wallCollSparkPoint_);
+  sparkShape->move(sparkOffset.x, sparkOffset.y);
+}
+
+void GfxManager::drawWallCollSparks(sf::RenderWindow *window, int time,
+                                   GfxEventHandler *gfxHandler, Ship **ships) {
+  ShipHitWallGraphic **wallColls = gfxHandler->getWallColls();
+  int numWallCollHits = gfxHandler->getWallCollsCount();
+  
+  for (int ii = 0; ii < numWallCollHits; ii++) {
+    ShipHitWallGraphic *wallColl = wallColls[ii];
+    int sparkTime = (time - wallColl->time);
+    wallCollSparkShape_.setFillColor(shipColors_[wallColl->shipIndex]);
+    for (int jj = 0; jj < wallColl->numWallCollSparks; jj++) {
+      wallCollSparkShape_.setPosition(adjustX(wallColl->x),
+                                      adjustY(wallColl->y));
+      wallCollSparkShape_.setRotation(wallColl->offsets[jj]);
+      adjustWallCollSparkPosition(&wallCollSparkShape_, wallColl->offsets[jj],
+                                  sparkTime, wallColl->speeds[jj]);
+      window->draw(wallCollSparkShape_);
+    }
+  }
+}
+
+void GfxManager::adjustShipShipCollSparkPosition(sf::CircleShape *sparkShape,
+    double angle, int sparkTime, int sparkSpeed) {
+  sf::Transform transform;
+  transform.rotate(angle);
+  double scale = 2*((((double) sparkTime) / 3) * sparkSpeed / 100);
+  transform.scale(scale, scale);
+  sf::Vector2f sparkOffset = transform.transformPoint(shipShipCollSparkPoint_);
+  sparkShape->move(sparkOffset.x, sparkOffset.y);
+}
+
+void GfxManager::drawShipShipCollSparks(sf::RenderWindow *window, int time,
+                                   GfxEventHandler *gfxHandler, Ship **ships) {
+  ShipHitShipGraphic **shipShipColls = gfxHandler->getShipShipColls();
+  int numShipShipColls = gfxHandler->getShipShipCollsCount();
+  
+  for (int ii = 0; ii < numShipShipColls; ii++) {
+    ShipHitShipGraphic *shipShipColl = shipShipColls[ii];
+    int sparkTime = (time - shipShipColl->time);
+    shipShipCollSparkShape_.setFillColor(shipColors_[shipShipColl->shipIndex]);
+    for (int jj = 0; jj < shipShipColl->numShipShipCollSparks; jj++) {
+      shipShipCollSparkShape_.setPosition(adjustX(shipShipColl->x),
+                                          adjustY(shipShipColl->y));
+      shipShipCollSparkShape_.setRotation(shipShipColl->offsets[jj]);
+      adjustShipShipCollSparkPosition(&shipShipCollSparkShape_, shipShipColl->offsets[jj],
+                                      sparkTime, shipShipColl->speeds[jj]);
+      window->draw(shipShipCollSparkShape_);
     }
   }
 }

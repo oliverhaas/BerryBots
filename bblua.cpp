@@ -189,6 +189,19 @@ int Ship_fireThruster(lua_State *L) {
   return 1;
 }
 
+int Ship_chargeShields(lua_State *L) {
+  Ship *ship = checkShip(L, 1);
+  if (ship->alive && ship->shieldsEnabled) {
+    double lim = std::max(luaL_checknumber(L, 2), 0.);
+    ship->shields += std::min(lim, ship->power);
+    ship->power = std::max(0., ship->power-lim);
+    lua_pushboolean(L, true);
+  } else {
+    lua_pushboolean(L, false);
+  }
+  return 1;
+}
+
 int Ship_fireLaser(lua_State *L) {
   Ship *ship = checkShip(L, 1);
   if (ship->alive && ship->laserEnabled
@@ -244,7 +257,25 @@ int Ship_speed(lua_State *L) {
 
 int Ship_momentum(lua_State *L) {
   Ship *ship = checkShip(L, 1);
-  lua_pushnumber(L, ship->speed);
+  lua_pushnumber(L, ship->momentum);
+  return 1;
+}
+
+int Ship_power(lua_State *L) {
+  Ship *ship = checkShip(L, 1);
+  lua_pushnumber(L, ship->power);
+  return 1;
+}
+
+int Ship_torpedoAmmo(lua_State *L) {
+  Ship *ship = checkShip(L, 1);
+  lua_pushinteger(L, ship->torpedoAmmo);
+  return 1;
+}
+
+int Ship_shields(lua_State *L) {
+  Ship *ship = checkShip(L, 1);
+  lua_pushnumber(L, ship->shields);
   return 1;
 }
 
@@ -388,6 +419,32 @@ int Ship_setLaserColor(lua_State *L) {
   return 1;
 }
 
+int Ship_setShieldsColor(lua_State *L) {
+  Ship *ship = checkShip(L, 1);
+  BerryBotsEngine *engine = ship->properties->engine;
+  Team *team = engine->getTeam(ship->teamIndex);
+  if (!engine->isShipInitComplete() || team->gfxEnabled) {
+    int r = limit(0, luaL_checkint(L, 2), 255);
+    int g = limit(0, luaL_checkint(L, 3), 255);
+    int b = limit(0, luaL_checkint(L, 4), 255);
+    ship->properties->shieldsR = r;
+    ship->properties->shieldsG = g;
+    ship->properties->shieldsB = b;
+    ship->newColors = true;
+
+    std::stringstream ss;
+    if (team->numShips == 1) {
+      ss << "== Set";
+    } else {
+      ss << "== Ship " << (ship->index - team->firstShipIndex + 1) << " set";
+    }
+    ss << " shields color: (" << r << ", " << g << ", " << b << ")";
+    engine->shipPrint(L, ss.str().c_str());
+  }
+  lua_settop(L, 1);
+  return 1;
+}
+
 int Ship_setThrusterColor(lua_State *L) {
   Ship *ship = checkShip(L, 1);
   BerryBotsEngine *engine = ship->properties->engine;
@@ -435,6 +492,10 @@ const luaL_Reg Ship_methods[] = {
   {"heading",           Ship_heading},
   {"speed",             Ship_speed},
   {"momentum",          Ship_momentum},
+  {"power",             Ship_power},
+  {"torpedoAmmo",       Ship_torpedoAmmo},
+  {"shields",           Ship_shields},
+  {"chargeShields",     Ship_chargeShields},
   {"energy",            Ship_energy},
   {"laserGunHeat",      Ship_laserGunHeat},
   {"torpedoGunHeat",    Ship_torpedoGunHeat},
@@ -446,6 +507,7 @@ const luaL_Reg Ship_methods[] = {
   {"setTeamName",       Ship_setTeamName},
   {"setShipColor",      Ship_setShipColor},
   {"setLaserColor",     Ship_setLaserColor},
+  {"setShieldsColor",   Ship_setShieldsColor},
   {"setThrusterColor",  Ship_setThrusterColor},
   {"name",              Ship_name},
   {"teamName",          Ship_teamName},
@@ -469,6 +531,9 @@ void pushVisibleEnemyShips(
       setField(L, "heading", ship->heading);
       setField(L, "speed", ship->speed);
       setField(L, "momentum", ship->momentum);
+      setField(L, "power", ship->power);
+      setField(L, "torpedoAmmo", ship->torpedoAmmo);
+      setField(L, "shields", ship->shields);
       setField(L, "energy", ship->energy);
       setField(L, "isStageShip", ship->properties->stageShip);
       setField(L, "name", ship->properties->name);
@@ -1643,6 +1708,24 @@ int Admin_setShipEnergyEnabled(lua_State *L) {
   return 1;
 }
 
+int Admin_setShipPowerEnabled(lua_State *L) {
+  Admin *admin = checkAdmin(L, 1);
+  Ship *ship = getShip(L, 2, admin->engine);
+  if (ship != 0) {
+    ship->powerEnabled = lua_toboolean(L, 3);
+  }
+  return 1;
+}
+
+int Admin_setShipShieldsEnabled(lua_State *L) {
+  Admin *admin = checkAdmin(L, 1);
+  Ship *ship = getShip(L, 2, admin->engine);
+  if (ship != 0) {
+    ship->shieldsEnabled = lua_toboolean(L, 3);
+  }
+  return 1;
+}
+
 int Admin_setShipShowName(lua_State *L) {
   Admin *admin = checkAdmin(L, 1);
   Ship *ship = getShip(L, 2, admin->engine);
@@ -1733,6 +1816,15 @@ int Admin_shipFriendlyDamage(lua_State *L) {
   Ship *ship = getShip(L, 2, admin->engine);
   if (ship != 0) {
     lua_pushnumber(L, ship->friendlyDamage);
+  }
+  return 1;
+}
+
+int Admin_shipShieldedDamage(lua_State *L) {
+  Admin *admin = checkAdmin(L, 1);
+  Ship *ship = getShip(L, 2, admin->engine);
+  if (ship != 0) {
+    lua_pushnumber(L, ship->shieldedDamage);
   }
   return 1;
 }
@@ -1838,12 +1930,15 @@ const luaL_Reg Admin_methods[] = {
   {"setShipTorpedoEnabled",   Admin_setShipTorpedoEnabled},
   {"setShipThrusterEnabled",  Admin_setShipThrusterEnabled},
   {"setShipEnergyEnabled",    Admin_setShipEnergyEnabled},
+  {"setShipPowerEnabled",     Admin_setShipPowerEnabled},
+  {"setShipShieldsEnabled",   Admin_setShipShieldsEnabled},
   {"setShipShowName",         Admin_setShipShowName},
   {"sendEvent",               Admin_sendEvent},
   {"shipKills",               Admin_shipKills},
   {"shipDamage",              Admin_shipDamage},
   {"shipFriendlyKills",       Admin_shipFriendlyKills},
   {"shipFriendlyDamage",      Admin_shipFriendlyDamage},
+  {"shipShieldedDamage",      Admin_shipShieldedDamage},
   {"setWinner",               Admin_setWinner},
   {"setRank",                 Admin_setRank},
   {"setScore",                Admin_setScore},
