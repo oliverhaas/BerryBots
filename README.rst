@@ -72,7 +72,7 @@ As of now it's a work-in-progress, but they are mainly:
   damage overall just by blindly shielding. The numbers probably need some tuning in the future, but 
   overall I think it's a nice approach. As mentioned above power is already sparse when firing lasers, 
   torpedos and thrusters all the time, and this is intentionally so "old" bots without shielding are 
-  still pretty viable.
+  still pretty viable. Shield strength is animated as well.
 - DONE: I changed torpedos to an ammo system (10 per round) and reduced the torpedo heat (to 40 from 
   100 for now). So in theory one can fire more torpedos in a short time. but is limited in total per 
   round. As I said I want the bots/players to have the option to have short time strategies within 
