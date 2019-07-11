@@ -81,11 +81,11 @@ As of now it's a work-in-progress, but they are mainly:
   thus forces most target bots to orbit in a specific direction, then fires multiple torpedoes in 
   the target bot's path. At least I'm hoping that this way different strategies will evolve and 
   responses to those strategies, etc.
-- MAYBE: Change the weapon and energy system. I'm thinking about maybe adding another weapon (ion gun, 
-  bevaviour somewhere in-between torpedos and lasers) and have "shields" and "hull" instead of just
-  energy. And maybe have so ressource system for weapon firing, e.g. firing a laser costs 3 ressource and
-  ion gun costs 5, and ressource only replenishes 1 each tick. I'll have to see if it really improves the
-  game or not... But as of now I think the damage and weapon part of the game needs a little bit more depth.
+- MAYBE: Change the weapon system. I'm thinking about either expanding lasers a bit or 
+  (less likely) adding another weapon (ion gun, bevaviour somewhere in-between torpedos and lasers). 
+  There is still mainly no real depth to firing lasers, only angle, and maybe now a bit of power usage.
+  I'd like to have something similar to adjustable strength... But I'm not sure what the drawback should
+  be. More power cost? Delayed firing (e.g. for each tick "charging" the laser one gets additional 20% damage, maybe angle has to be "locked" when charging is started)? I'm not sure yet. 
 
 
 
